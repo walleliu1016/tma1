@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" role="img" aria-labelledby="title desc">
+  <title id="title">TMA1 Logo</title>
+  <desc id="desc">Minimal tech wordmark with local anomaly glyph.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f1422"/>
+      <stop offset="100%" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <linearGradient id="pillar" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#191f32"/>
+      <stop offset="100%" stop-color="#0e1321"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#7ad7ff"/>
+      <stop offset="100%" stop-color="#57b8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="220" height="220" rx="46" fill="url(#bg)"/>
+  <path d="M34 162h152" stroke="#1f2940" stroke-width="2"/>
+  <path d="M48 176h124" stroke="#1a2338" stroke-width="2"/>
+  <rect x="89" y="46" width="42" height="112" rx="7" fill="url(#pillar)"/>
+  <rect x="89" y="46" width="42" height="112" rx="7" fill="none" stroke="#263251" stroke-width="2"/>
+  <circle cx="110" cy="36" r="3.2" fill="url(#accent)"/>
+  <path d="M110 40v6" stroke="url(#accent)" stroke-width="2.3" stroke-linecap="round"/>
+  <path d="M72 93c12-12 24-17 38-17s26 5 38 17" fill="none" stroke="#69c8ff" stroke-opacity="0.2" stroke-width="2"/>
+
+  <text x="264" y="104" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-size="88" font-weight="700" letter-spacing="8" fill="#e6edf3">TMA1</text>
+  <text x="268" y="145" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-size="19" font-weight="500" letter-spacing="1.6" fill="#95a4bb">LOCAL-FIRST AGENT OBSERVABILITY</text>
+</svg>

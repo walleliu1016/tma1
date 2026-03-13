@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">TMA1 Logo Mark</title>
+  <desc id="desc">Minimal tech glyph representing a local anomaly signal.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f1422"/>
+      <stop offset="100%" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <linearGradient id="pillar" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#191f32"/>
+      <stop offset="100%" stop-color="#0e1321"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#7ad7ff"/>
+      <stop offset="100%" stop-color="#57b8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <path d="M36 190h184" stroke="#1f2940" stroke-width="2"/>
+  <path d="M52 206h152" stroke="#1a2338" stroke-width="2"/>
+
+  <rect x="102" y="52" width="52" height="132" rx="8" fill="url(#pillar)"/>
+  <rect x="102" y="52" width="52" height="132" rx="8" fill="none" stroke="#263251" stroke-width="2"/>
+
+  <circle cx="128" cy="42" r="4" fill="url(#accent)"/>
+  <path d="M128 46v8" stroke="url(#accent)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <path d="M78 108c14-14 30-20 50-20s36 6 50 20" fill="none" stroke="#69c8ff" stroke-opacity="0.22" stroke-width="2"/>
+  <path d="M66 100c17-18 37-26 62-26s45 8 62 26" fill="none" stroke="#69c8ff" stroke-opacity="0.14" stroke-width="2"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f1422"/>
+      <stop offset="100%" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <linearGradient id="pillar" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1a2134"/>
+      <stop offset="100%" stop-color="#0f1421"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#7ad7ff"/>
+      <stop offset="100%" stop-color="#57b8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <path d="M10 47h44" stroke="#1f2940" stroke-width="1.2"/>
+  <rect x="24" y="14" width="16" height="31" rx="2.5" fill="url(#pillar)"/>
+  <rect x="24" y="14" width="16" height="31" rx="2.5" fill="none" stroke="#273352" stroke-width="0.8"/>
+  <circle cx="32" cy="9.5" r="1.8" fill="url(#accent)"/>
+  <path d="M32 11.5v2.5" stroke="url(#accent)" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,10 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import HomePage from '../../components/HomePage.astro';
+import { es } from '../../i18n/ui';
+import '../../styles/global.css';
+---
+
+<Layout title={es.title} description={es.description} lang="es">
+  <HomePage t={es} />
+</Layout>

@@ -1,0 +1,581 @@
+---
+import type { T } from '../i18n/ui';
+
+interface Props {
+  t: T;
+}
+
+const { t } = Astro.props;
+const lang = t.lang;
+const onboardingCmd = 'Read https://tma1.ai/SKILL.md and follow the instructions to install and configure TMA1 for your AI agent';
+const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | sh';
+---
+
+<div class="container">
+  <nav>
+    <a class="logo" href="/" aria-label="TMA1 home">
+      <img src="/logo-mark.svg" alt="TMA1 logo mark" />
+      <span>TMA1</span><span class="cursor">_</span>
+    </a>
+    <div class="links">
+      <a href="#features">{t.nav.features}</a>
+      <a href="#how-it-works">{t.nav.how}</a>
+      <a href="#security">{t.nav.security}</a>
+      <a href="https://github.com/tma1-ai/tma1">GitHub</a>
+    </div>
+    <div class="nav-controls">
+      <details class="dropdown theme-dropdown">
+        <summary class="control-btn" aria-label="Theme">
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 6 6 0 107 7z"/></svg>
+        </summary>
+        <div class="dropdown-panel">
+          <button data-theme-value="light"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg> {t.ui.theme_light}</button>
+          <button data-theme-value="dark"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 6 6 0 107 7z"/></svg> {t.ui.theme_dark}</button>
+          <button data-theme-value="system"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="8" rx="1"/><path d="M5.5 14h5M8 11v3"/></svg> {t.ui.theme_system}</button>
+        </div>
+      </details>
+      <details class="dropdown lang-dropdown">
+        <summary class="control-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M2 8h12M8 1.5c-2 2.5-2 10.5 0 13M8 1.5c2 2.5 2 10.5 0 13"/></svg>
+          <span class="lang-label">{lang === 'zh' ? '\u4e2d\u6587' : lang === 'es' ? 'ES' : 'EN'}</span>
+        </summary>
+        <div class="dropdown-panel">
+          <a href="/" class={lang === 'en' ? 'active' : ''} data-locale="en">English</a>
+          <a href="/zh/" class={lang === 'zh' ? 'active' : ''} data-locale="zh">{'\u4e2d\u6587'}</a>
+          <a href="/es/" class={lang === 'es' ? 'active' : ''} data-locale="es">Espa{'\u00f1'}ol</a>
+        </div>
+      </details>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <p class="eyebrow">TMA1</p>
+    <h1>
+      {t.hero.h1_1}
+      <span class="muted">{t.hero.h1_2}</span>
+    </h1>
+    <p class="subtitle">{t.hero.subtitle}</p>
+
+    <div class="onboarding-card">
+      <p class="onboarding-label">{t.onboarding.label}</p>
+      <div class="onboarding-body">
+        <p class="onboarding-text">Read <a href="https://tma1.ai/SKILL.md">https://tma1.ai/SKILL.md</a> and follow the instructions to install and configure TMA1 for your AI agent</p>
+        <button class="copy-btn"
+          onclick={`navigator.clipboard.writeText('${onboardingCmd}').then(()=>{this.textContent='${t.ui.copied}';setTimeout(()=>this.textContent='${t.ui.copy}',1500)})`}>
+          {t.ui.copy}
+        </button>
+      </div>
+    </div>
+
+    <details class="manual-install">
+      <summary>{t.onboarding.manual}</summary>
+      <div class="terminal install-terminal">
+        <div class="terminal-header">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="terminal-title">terminal</span>
+        </div>
+        <div class="terminal-body">
+          <div class="line">
+            <span class="prompt">$</span>
+            <span class="cmd">{curlCmd}</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="highlights">
+      {t.highlights.map(h => (
+        <div class="highlight-card">
+          <h3>{h.title}</h3>
+          <p set:html={h.desc} />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <p class="section-kicker">{t.features.kicker}</p>
+    <h2 class="section-title">{t.features.title}</h2>
+    <p class="section-desc">{t.features.desc}</p>
+    <div class="feature-grid">
+      {t.features.cards.map(c => (
+        <div class="feature-card">
+          <div class="feature-icon">{c.num}</div>
+          <h3>{c.title}</h3>
+          <p set:html={c.desc} />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="how-it-works" class="how-it-works">
+    <p class="section-kicker">{t.how.kicker}</p>
+    <h2 class="section-title">{t.how.title}</h2>
+    <p class="section-desc">{t.how.desc}</p>
+    <div class="steps">
+      {t.how.steps.map(s => (
+        <div class="step">
+          <div class="step-num">{s.num}</div>
+          <div class="step-content">
+            <h3>{s.title}</h3>
+            <p set:html={s.desc} />
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="security" class="security-section">
+    <p class="section-kicker">{t.security.kicker}</p>
+    <h2 class="section-title">{t.security.title}</h2>
+    <p class="section-desc">{t.security.desc}</p>
+
+    <article class="security-panel">
+      <h3 class="panel-title">{t.security.panel_title}</h3>
+      <p class="panel-body" set:html={t.security.panel_body} />
+    </article>
+
+    <div class="protection-grid">
+      {t.security.cards.map(c => (
+        <article class="protection-card">
+          <h4 class="protection-title">{c.title}</h4>
+          <p class="protection-body" set:html={c.desc} />
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="faq-section">
+    <p class="section-kicker">{t.faq.kicker}</p>
+    <h2 class="section-title">{t.faq.title}</h2>
+
+    <div class="faq-list">
+      {t.faq.items.map(item => (
+        <article class="faq-card">
+          <h3 class="faq-question">{item.q}</h3>
+          <p class="faq-answer" set:html={item.a} />
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="quickstart">
+    <p class="section-kicker">{t.quickstart.kicker}</p>
+    <h2 class="section-title">{t.quickstart.title}</h2>
+    <p class="section-desc">{t.quickstart.desc}</p>
+    <div class="onboarding-card quickstart-card">
+      <p class="onboarding-label">{t.onboarding.label}</p>
+      <div class="onboarding-body">
+        <p class="onboarding-text">Read <a href="https://tma1.ai/SKILL.md">https://tma1.ai/SKILL.md</a> and follow the instructions to install and configure TMA1 for your AI agent</p>
+        <button class="copy-btn"
+          onclick={`navigator.clipboard.writeText('${onboardingCmd}').then(()=>{this.textContent='${t.ui.copied}';setTimeout(()=>this.textContent='${t.ui.copy}',1500)})`}>
+          {t.ui.copy}
+        </button>
+      </div>
+    </div>
+    <details class="manual-install">
+      <summary>{t.quickstart.manual}</summary>
+      <div class="terminal quickstart-terminal">
+        <div class="terminal-header">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="terminal-title">terminal</span>
+        </div>
+        <div class="terminal-body">
+          <div class="line comment"># Install TMA1</div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">curl -fsSL https://tma1.ai/install.sh | sh</span></div>
+          <div class="line">&nbsp;</div>
+          <div class="line comment"># Start TMA1</div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">tma1-server</span></div>
+          <div class="line">&nbsp;</div>
+          <div class="line comment"># Configure your agent (example: OpenClaw)</div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">openclaw config set diagnostics.otel.endpoint <span class="url">http://localhost:14318/v1/otlp</span></span></div>
+          <div class="line">&nbsp;</div>
+          <div class="line comment"># Or any OTel SDK</div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">export <span class="arg">OTEL_EXPORTER_OTLP_ENDPOINT</span>=<span class="url">http://localhost:14318/v1/otlp</span></span></div>
+          <div class="line">&nbsp;</div>
+          <div class="line comment"># Open dashboard</div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">open <span class="url">http://localhost:14318</span></span></div>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p class="brand">TMA1<span class="cursor">_</span></p>
+    <div class="footer-links">
+      <a href="https://github.com/tma1-ai/tma1">GitHub</a>
+      <span>/</span>
+      <a href="https://github.com/tma1-ai/tma1/blob/main/LICENSE">Apache-2.0</a>
+      <span>/</span>
+      <a href="#security">{t.nav.security}</a>
+    </div>
+    <p set:html={t.footer.tagline} />
+  </footer>
+</div>
+
+<style>
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    padding: 16px 0;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  nav .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 18px; font-weight: 700; letter-spacing: 2px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  nav .logo img {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  nav .cursor, footer .cursor {
+    animation: blink 1.2s step-end infinite;
+    color: var(--accent);
+  }
+  nav .links { margin-left: auto; display: flex; gap: 20px; font-size: 14px; }
+  nav .links a { color: var(--text-muted); }
+  nav .links a:hover { color: var(--text); text-decoration: none; }
+  .nav-controls {
+    display: flex; align-items: center; gap: 2px;
+    margin-left: 12px; padding-left: 12px;
+    border-left: 1px solid var(--border);
+  }
+  .dropdown { position: relative; }
+  .dropdown summary { list-style: none; cursor: pointer; }
+  .dropdown summary::-webkit-details-marker { display: none; }
+  .control-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; border-radius: 6px;
+    color: var(--text-muted); font-size: 13px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .control-btn:hover { color: var(--text); background: var(--bg-card); }
+  .control-btn svg { flex-shrink: 0; }
+  .lang-label { font-size: 12px; }
+  .icon-sun { display: none; }
+  .icon-moon { display: block; }
+  :global([data-theme="light"]) .icon-sun { display: block; }
+  :global([data-theme="light"]) .icon-moon { display: none; }
+  .dropdown-panel {
+    position: absolute; right: 0; top: calc(100% + 4px);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px; min-width: 130px;
+    box-shadow: 0 8px 24px var(--shadow);
+    z-index: 100;
+  }
+  .dropdown-panel a,
+  .dropdown-panel button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 8px 12px; border: none;
+    background: none; color: var(--text-muted);
+    font-size: 13px; font-family: inherit;
+    border-radius: 6px; cursor: pointer;
+    text-decoration: none;
+    transition: background 0.1s, color 0.1s;
+  }
+  .dropdown-panel a:hover,
+  .dropdown-panel button:hover {
+    background: var(--accent-glow); color: var(--text);
+    text-decoration: none;
+  }
+  .dropdown-panel a.active,
+  .dropdown-panel button.active {
+    color: var(--accent); font-weight: 600;
+  }
+
+  /* Hero */
+  .hero { padding: 80px 0 48px; }
+  .hero .eyebrow {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 13px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 56px; font-weight: 700; letter-spacing: -1.5px;
+    line-height: 1.1; margin-bottom: 20px; max-width: 16ch;
+  }
+  .hero h1 .muted { color: var(--text-muted); }
+  .hero .subtitle {
+    font-size: 18px; color: var(--text-muted);
+    max-width: 640px; line-height: 1.7; margin-bottom: 32px;
+  }
+
+  /* Onboarding card */
+  .onboarding-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+    max-width: 720px; margin-bottom: 16px;
+  }
+  .onboarding-label {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 11px; letter-spacing: 0.2em;
+    color: var(--text-muted); margin-bottom: 12px;
+  }
+  .onboarding-body { display: flex; align-items: flex-start; gap: 16px; }
+  .onboarding-text {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 14px; line-height: 1.6; color: var(--text); flex: 1;
+  }
+  .onboarding-text a {
+    color: var(--text); text-decoration: underline;
+    text-decoration-color: var(--text-muted); text-underline-offset: 2px;
+  }
+  .onboarding-text a:hover { text-decoration-color: var(--text); }
+  .copy-btn {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text-muted);
+    padding: 6px 12px; cursor: pointer; font-size: 12px;
+    font-family: inherit; transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .copy-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* Manual install */
+  .manual-install { max-width: 720px; margin-bottom: 24px; }
+  .manual-install summary {
+    font-size: 13px; color: var(--text-muted);
+    cursor: pointer; padding: 4px 0; margin-bottom: 8px;
+  }
+  .manual-install summary:hover { color: var(--text); }
+  .install-terminal { margin-top: 8px; }
+
+  /* Terminal chrome */
+  .terminal {
+    background: var(--terminal-bg); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .terminal-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; background: var(--terminal-header);
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+  .dot.red { background: #ff5f57; }
+  .dot.yellow { background: #febc2e; }
+  .dot.green { background: #28c840; }
+  .terminal-title {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 11px; color: var(--comment); margin-left: 6px;
+  }
+  .terminal-body {
+    padding: 16px 20px; font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 14px; line-height: 1.7;
+  }
+  .terminal-body .line {
+    display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
+  }
+  .terminal-body .prompt { color: var(--comment); user-select: none; flex-shrink: 0; }
+  .terminal-body .cmd { color: var(--accent); }
+  .terminal-body .arg { color: var(--purple); }
+  .terminal-body .url { color: var(--blue); }
+  .terminal-body .comment { color: var(--comment); font-style: italic; }
+
+  .quickstart-terminal { max-width: 720px; }
+  .quickstart-card { max-width: 720px; }
+
+  /* Highlights */
+  .highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .highlight-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .highlight-card:hover {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 12px var(--accent-shadow);
+    transform: translateY(-1px);
+  }
+  .highlight-card h3 { font-size: 15px; margin-bottom: 6px; letter-spacing: -0.02em; }
+  .highlight-card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+  /* Shared section */
+  .section-kicker {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+  }
+  .section-kicker::before { content: "> "; }
+  .section-title {
+    font-size: 36px; font-weight: 700; letter-spacing: -0.8px;
+    line-height: 1.15; margin-bottom: 12px;
+  }
+  .section-desc {
+    font-size: 16px; color: var(--text-muted);
+    line-height: 1.6; max-width: 640px; margin-bottom: 32px;
+  }
+
+  /* Features */
+  .features { padding: 60px 0; border-top: 1px solid var(--border); }
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .feature-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .feature-card:hover {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 12px var(--accent-shadow);
+    transform: translateY(-1px);
+  }
+  .feature-icon {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 13px; color: var(--accent); margin-bottom: 12px;
+  }
+  .feature-card h3 { font-size: 16px; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .feature-card p { font-size: 14px; color: var(--text-muted); line-height: 1.55; }
+
+  /* How it works */
+  .how-it-works { padding: 60px 0; border-top: 1px solid var(--border); }
+  .steps { display: flex; flex-direction: column; gap: 24px; max-width: 640px; }
+  .step { display: flex; gap: 16px; align-items: flex-start; }
+  .step-num {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 15px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0; line-height: 1.6;
+  }
+  .step-content h3 { font-size: 15px; margin-bottom: 4px; }
+  .step-content p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+  /* Security */
+  .security-section { padding: 60px 0; border-top: 1px solid var(--border); }
+  .security-panel {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; margin-bottom: 20px;
+  }
+  .panel-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.02em; }
+  .panel-body { font-size: 15px; color: var(--text-muted); line-height: 1.65; }
+  .protection-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .protection-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .protection-card:hover {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 12px var(--accent-shadow);
+    transform: translateY(-1px);
+  }
+  .protection-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .protection-body { font-size: 14px; color: var(--text-muted); line-height: 1.55; }
+
+  /* FAQ */
+  .faq-section { padding: 60px 0; border-top: 1px solid var(--border); }
+  .faq-list { display: flex; flex-direction: column; gap: 16px; }
+  .faq-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .faq-card:hover {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 12px var(--accent-shadow);
+    transform: translateY(-1px);
+  }
+  .faq-question { font-size: 16px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .faq-answer { font-size: 15px; color: var(--text-muted); line-height: 1.65; }
+
+  /* Quickstart */
+  .quickstart { padding: 60px 0; border-top: 1px solid var(--border); }
+
+  /* Footer */
+  footer {
+    padding: 40px 0; border-top: 1px solid var(--border);
+    text-align: center; font-size: 13px; color: var(--text-muted);
+  }
+  footer .brand {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    color: var(--text); margin-bottom: 12px;
+  }
+  footer .footer-links {
+    display: flex; justify-content: center; gap: 8px; margin-bottom: 12px;
+  }
+  footer a { color: var(--text-muted); }
+  footer a:hover { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 40px; max-width: 100%; }
+    .highlights { grid-template-columns: 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .protection-grid { grid-template-columns: 1fr; }
+    .onboarding-card { max-width: 100%; }
+    .onboarding-body { flex-direction: column; gap: 12px; }
+    .manual-install { max-width: 100%; }
+    .quickstart-terminal { max-width: 100%; }
+    .terminal-body { overflow-x: auto; }
+    .terminal-body .line { min-width: 0; }
+    nav { flex-wrap: wrap; }
+    nav .links { gap: 12px; font-size: 13px; }
+    .nav-controls { margin-left: 0; padding-left: 0; border-left: none; }
+  }
+</style>
+
+<script is:inline>
+(function() {
+  // Theme toggle
+  function setTheme(choice) {
+    var t;
+    if (choice === 'system') {
+      localStorage.removeItem('tma1-theme');
+      t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    } else {
+      localStorage.setItem('tma1-theme', choice);
+      t = choice;
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    markActiveTheme(choice);
+  }
+
+  function markActiveTheme(choice) {
+    document.querySelectorAll('[data-theme-value]').forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-theme-value') === choice);
+    });
+  }
+
+  // Mark initial active theme
+  markActiveTheme(localStorage.getItem('tma1-theme') || 'system');
+
+  // Theme button clicks
+  document.querySelectorAll('[data-theme-value]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setTheme(this.getAttribute('data-theme-value'));
+      this.closest('details').removeAttribute('open');
+    });
+  });
+
+  // System theme change listener
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+    if (!localStorage.getItem('tma1-theme')) setTheme('system');
+  });
+
+  // Language selection - store preference
+  document.querySelectorAll('[data-locale]').forEach(function(a) {
+    a.addEventListener('click', function() {
+      localStorage.setItem('tma1-locale', this.getAttribute('data-locale'));
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('details.dropdown').forEach(function(d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+})();
+</script>

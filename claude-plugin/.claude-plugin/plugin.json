@@ -1,0 +1,8 @@
+{
+  "name": "tma1",
+  "version": "0.1.0",
+  "description": "Local-first LLM agent observability powered by GreptimeDB.",
+  "author": { "name": "killme2008" },
+  "repository": "https://github.com/killme2008/tma1",
+  "license": "Apache-2.0"
+}

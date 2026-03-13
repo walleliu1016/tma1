@@ -1,0 +1,121 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLoadDefaults(t *testing.T) {
+	// Clear all TMA1_ env vars to test defaults.
+	for _, key := range []string{
+		"TMA1_HOST", "TMA1_PORT", "TMA1_DATA_DIR", "TMA1_GREPTIMEDB_VERSION",
+		"TMA1_GREPTIMEDB_HTTP_PORT", "TMA1_GREPTIMEDB_MYSQL_PORT", "TMA1_LOG_LEVEL",
+	} {
+		t.Setenv(key, "")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+
+	home, _ := os.UserHomeDir()
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"Host", cfg.Host, "127.0.0.1"},
+		{"Port", cfg.Port, "14318"},
+		{"DataDir", cfg.DataDir, filepath.Join(home, ".tma1")},
+		{"GreptimeDBVersion", cfg.GreptimeDBVersion, "latest"},
+		{"LogLevel", cfg.LogLevel, "info"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Errorf("got %q, want %q", tt.got, tt.want)
+			}
+		})
+	}
+
+	intTests := []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"GreptimeDBHTTPPort", cfg.GreptimeDBHTTPPort, 14000},
+		{"GreptimeDBMySQLPort", cfg.GreptimeDBMySQLPort, 14002},
+	}
+	for _, tt := range intTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Errorf("got %d, want %d", tt.got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadEnvOverrides(t *testing.T) {
+	t.Setenv("TMA1_HOST", "0.0.0.0")
+	t.Setenv("TMA1_PORT", "9999")
+	t.Setenv("TMA1_DATA_DIR", "/tmp/tma1-test")
+	t.Setenv("TMA1_GREPTIMEDB_VERSION", "v0.12.0")
+	t.Setenv("TMA1_GREPTIMEDB_HTTP_PORT", "5000")
+	t.Setenv("TMA1_GREPTIMEDB_MYSQL_PORT", "5002")
+	t.Setenv("TMA1_LOG_LEVEL", "debug")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"Host", cfg.Host, "0.0.0.0"},
+		{"Port", cfg.Port, "9999"},
+		{"DataDir", cfg.DataDir, "/tmp/tma1-test"},
+		{"GreptimeDBVersion", cfg.GreptimeDBVersion, "v0.12.0"},
+		{"LogLevel", cfg.LogLevel, "debug"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Errorf("got %q, want %q", tt.got, tt.want)
+			}
+		})
+	}
+
+	intTests := []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"GreptimeDBHTTPPort", cfg.GreptimeDBHTTPPort, 5000},
+		{"GreptimeDBMySQLPort", cfg.GreptimeDBMySQLPort, 5002},
+	}
+	for _, tt := range intTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Errorf("got %d, want %d", tt.got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnvIntInvalidFallback(t *testing.T) {
+	t.Setenv("TMA1_GREPTIMEDB_HTTP_PORT", "not-a-number")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+
+	if cfg.GreptimeDBHTTPPort != 14000 {
+		t.Errorf("expected fallback 14000 for invalid int, got %d", cfg.GreptimeDBHTTPPort)
+	}
+}

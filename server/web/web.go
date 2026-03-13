@@ -1,0 +1,7 @@
+// Package web embeds the static dashboard files.
+package web
+
+import "embed"
+
+//go:embed *.html *.svg css js
+var FS embed.FS

@@ -1,0 +1,39 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs / temp files
+*.log
+*.tmp
+tmp/
+
+# GreptimeDB local data (never commit)
+.tma1/
+
+# Go build / test artifacts
+server/bin/
+server/tma1-server
+*.test
+*.out
+coverage.out
+
+# Release artifacts
+tma1-server-*.tar.gz
+tma1-server-*.sha256sum
+
+# Site build output
+site/dist/
+site/node_modules/
+site/.astro/

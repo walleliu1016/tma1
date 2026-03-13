@@ -1,0 +1,11 @@
+{
+  "name": "tma1",
+  "owner": { "name": "killme2008" },
+  "plugins": [
+    {
+      "name": "tma1",
+      "source": "./claude-plugin",
+      "description": "Local-first LLM agent observability. Track tokens, cost, and conversations on your machine."
+    }
+  ]
+}
