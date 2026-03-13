@@ -2,19 +2,20 @@
 
 > *"Your agent runs. TMA1 remembers."*
 
-Local-first LLM observability, powered by [GreptimeDB](https://greptime.com).
-Traces, metrics, and conversations — unified in one SQL-queryable engine.
-No cloud accounts, no Docker, no Grafana setup required.
+Local-first observability for AI agents.
+Track traces, token usage, cost, latency, errors, and conversation replay in one place.
+No cloud account, no Docker, no Grafana setup.
 
 Named after TMA-1 (Tycho Magnetic Anomaly-1) from *2001: A Space Odyssey*:
 the monolith buried on the moon, silently recording everything until you dig it out.
 
-## Three Pillars → One Engine
+## What You Get
 
-- **Traces**: OpenClaw spans (`openclaw.*`) and GenAI spans (`gen_ai.*`) carry model, tokens, latency, and status
-- **Metrics**: Claude Code sends OTel metrics directly; Flow engine derives aggregations from traces; OpenClaw sends native OTel metrics (auto-creates tables)
-- **Logs**: Claude Code sends structured log events (API requests, tool results, user prompts)
-- **Cross-signal JOIN**: `trace_id` connects spans to conversations
+- **Conversation replay**: inspect prompts and responses for each run
+- **Cost and token tracking**: per model, per time window
+- **Latency and error visibility**: find slow and failing calls quickly
+- **Cross-signal debugging**: traces, metrics, and logs linked by `trace_id`
+- **SQL access**: query raw events and rollups directly
 
 ## Quick Install
 
@@ -33,7 +34,7 @@ make build
 ## Quick Start
 
 ```bash
-# Start TMA1 (downloads GreptimeDB on first run)
+# Start TMA1
 tma1-server
 
 # Configure your agent to send OTel data (protobuf required):
@@ -58,32 +59,26 @@ your-agent
 open http://localhost:14318
 ```
 
-## Architecture
+## Supported Sources
 
-```
-Agent (Claude Code / Codex / OpenClaw / any GenAI app)
-    │  OTLP/HTTP  → http://localhost:14318/v1/otlp
-    ▼
-tma1-server  port 14318
-    │  proxies OTLP to GreptimeDB, auto-injects trace pipeline header
-    ▼
-GreptimeDB  (managed by tma1-server)
-    │  Flow engine → continuous aggregation
-    │  HTTP SQL API  port 14000
-    ▼
-Browser dashboard (served by tma1-server)
-    ├── Claude Code view  (from OTel metrics + logs)
-    │   ├── Overview, Events, Cost, Search
-    │   └── Token usage, cost, tool decisions, API requests, conversation replay
-    ├── OpenClaw view  (from OTel traces + metrics)
-    │   ├── Overview, Traces, Cost, Search
-    │   └── LLM calls, channels, cache efficiency, queue depth, session state
-    └── OTel GenAI view  (from OTel traces with gen_ai.* attributes)
-        ├── Overview, Traces, Cost, Security, Search
-        └── Token usage, cost, latency, conversation replay, anomaly detection
+- **Claude Code**: OTel metrics + logs
+- **OpenClaw**: OTel traces + metrics
+- **Any OTel-compatible GenAI app**: traces with `gen_ai.*` attributes
+
+Send OTLP to:
+
+```text
+http://localhost:14318/v1/otlp
 ```
 
-OTel data goes through tma1-server's OTLP proxy, which forwards to GreptimeDB and auto-injects the `x-greptime-pipeline-name` header required for trace ingestion.
+## How It Works
+
+1. Your agent sends OTLP data to `tma1-server`.
+2. TMA1 stores and aggregates data locally.
+3. Dashboard is served from the same process on `http://localhost:14318`.
+4. You can query data via SQL.
+
+Implementation detail: TMA1 uses an embedded local GreptimeDB process managed by `tma1-server`.
 
 ## Configuration
 
@@ -91,9 +86,9 @@ OTel data goes through tma1-server's OTLP proxy, which forwards to GreptimeDB an
 |----------|---------|-------------|
 | `TMA1_HOST` | `127.0.0.1` | Address tma1-server binds to |
 | `TMA1_PORT` | `14318` | HTTP port for tma1-server dashboard |
-| `TMA1_DATA_DIR` | `~/.tma1` | Directory for GreptimeDB data + binaries |
+| `TMA1_DATA_DIR` | `~/.tma1` | Local data and binary directory |
 | `TMA1_GREPTIMEDB_VERSION` | `latest` | GreptimeDB version to download |
-| `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | GreptimeDB HTTP API + OTLP port |
+| `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | Embedded database HTTP API + OTLP port |
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
 

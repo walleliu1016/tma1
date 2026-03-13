@@ -67,11 +67,11 @@ export const en: T = {
     kicker: 'Security', title: 'Security & Privacy',
     desc: 'Agent conversations often contain sensitive context. TMA1 keeps everything on your machine.',
     panel_title: 'How data is stored',
-    panel_body: 'TMA1 writes all traces and conversation logs into a local <a href="https://github.com/GreptimeTeam/greptimedb">GreptimeDB</a> instance \u2014 an open-source observability database (Apache-2.0). Data lives in <code>~/.tma1/data/</code> and never leaves your filesystem.',
+    panel_body: 'TMA1 stores traces and conversation logs on your local disk in <code>~/.tma1/data/</code>. Nothing is uploaded to remote services, and you can inspect or delete the data at any time.',
     cards: [
       { title: 'No network calls', desc: 'After install, TMA1 doesn\u2019t contact any external service. No analytics, no crash reports, no update checks.' },
-      { title: 'Fully open source', desc: 'TMA1 and GreptimeDB are both Apache-2.0. Read the code, audit the build, run it air-gapped.' },
-      { title: 'Single binary', desc: '<code>tma1-server</code> manages a bundled GreptimeDB process. No Docker, no system packages, no runtime dependencies.' },
+      { title: 'Fully open source', desc: 'TMA1 is Apache-2.0. Read the code, audit the build, and run it air-gapped.' },
+      { title: 'Single binary', desc: '<code>tma1-server</code> runs as one local process and manages its embedded storage engine. No Docker, no system packages, no runtime dependencies.' },
       { title: 'Your data, your disk', desc: 'Delete <code>~/.tma1/</code> and everything is gone. No orphaned cloud state, no remote accounts to close.' },
     ],
   },
@@ -79,8 +79,8 @@ export const en: T = {
     kicker: 'FAQ', title: 'Common questions',
     items: [
       { q: 'Which agents are supported?', a: 'Any agent that emits OpenTelemetry data. Claude Code sends metrics and logs. OpenClaw sends traces and metrics. Any OTel SDK app with GenAI semantic conventions works out of the box. The dashboard auto-detects the data source and shows the right view.' },
-      { q: 'Can I query the data with SQL?', a: 'Yes. Run <code>mysql -h 127.0.0.1 -P 14002</code> to connect, or open the GreptimeDB dashboard at <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code>. Query raw traces in <code>opentelemetry_traces</code> or the aggregated <code>tma1_*_1m</code> tables.' },
-      { q: 'How much disk space does it use?', a: 'Depends on your agent\u2019s activity. A typical setup uses a few hundred MB per month. GreptimeDB compresses observability data efficiently.' },
+      { q: 'Can I query the data with SQL?', a: 'Yes. Run <code>mysql -h 127.0.0.1 -P 14002</code> to connect to the local SQL endpoint, or open <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> for the built-in query UI. Raw traces are in <code>opentelemetry_traces</code>; rollups are in <code>tma1_*_1m</code>.' },
+      { q: 'How much disk space does it use?', a: 'It depends on traffic and conversation length. A typical setup uses a few hundred MB per month.' },
     ],
   },
   quickstart: {
@@ -131,11 +131,11 @@ export const zh: T = {
     kicker: '\u5b89\u5168', title: '\u5b89\u5168\u4e0e\u9690\u79c1',
     desc: 'Agent \u5bf9\u8bdd\u7ecf\u5e38\u6d89\u53ca\u654f\u611f\u4fe1\u606f\u3002TMA1 \u628a\u4e00\u5207\u90fd\u7559\u5728\u4f60\u7684\u673a\u5668\u4e0a\u3002',
     panel_title: '\u6570\u636e\u600e\u4e48\u5b58\u7684',
-    panel_body: 'TMA1 \u628a\u6240\u6709 trace \u548c\u5bf9\u8bdd\u65e5\u5fd7\u5199\u5165\u672c\u5730\u7684 <a href="https://github.com/GreptimeTeam/greptimedb">GreptimeDB</a> \u5b9e\u4f8b\u2014\u2014\u4e00\u4e2a Apache-2.0 \u5f00\u6e90\u53ef\u89c2\u6d4b\u6027\u6570\u636e\u5e93\u3002\u6570\u636e\u5b58\u5728 <code>~/.tma1/data/</code>\uff0c\u4e0d\u4f1a\u79bb\u5f00\u4f60\u7684\u6587\u4ef6\u7cfb\u7edf\u3002',
+    panel_body: 'TMA1 \u4f1a\u628a trace \u548c\u5bf9\u8bdd\u65e5\u5fd7\u4fdd\u5b58\u5728\u672c\u5730 <code>~/.tma1/data/</code>\u3002\u6570\u636e\u4e0d\u4f1a\u4e0a\u4f20\u5230\u4efb\u4f55\u8fdc\u7a0b\u670d\u52a1\uff0c\u4f60\u53ef\u4ee5\u968f\u65f6\u67e5\u770b\u6216\u5220\u9664\u3002',
     cards: [
       { title: '\u96f6\u7f51\u7edc\u8bf7\u6c42', desc: '\u5b89\u88c5\u5b8c\u6210\u540e\uff0cTMA1 \u4e0d\u8054\u7cfb\u4efb\u4f55\u5916\u90e8\u670d\u52a1\u3002\u6ca1\u6709\u6570\u636e\u4e0a\u62a5\uff0c\u6ca1\u6709\u5d29\u6e83\u62a5\u544a\uff0c\u6ca1\u6709\u66f4\u65b0\u68c0\u67e5\u3002' },
-      { title: '\u5b8c\u5168\u5f00\u6e90', desc: 'TMA1 \u548c GreptimeDB \u90fd\u662f Apache-2.0\u3002\u770b\u4ee3\u7801\u3001\u5ba1\u6784\u5efa\u3001\u65ad\u7f51\u8dd1\uff0c\u968f\u4f60\u3002' },
-      { title: '\u5355\u4e00\u4e8c\u8fdb\u5236', desc: '<code>tma1-server</code> \u81ea\u5e26\u7ba1\u7406 GreptimeDB \u8fdb\u7a0b\u3002\u4e0d\u8981 Docker\uff0c\u4e0d\u8981\u7cfb\u7edf\u5305\uff0c\u6ca1\u6709\u8fd0\u884c\u65f6\u4f9d\u8d56\u3002' },
+      { title: '\u5b8c\u5168\u5f00\u6e90', desc: 'TMA1 \u91c7\u7528 Apache-2.0\u3002\u4ee3\u7801\u53ef\u5ba1\u8ba1\uff0c\u6784\u5efa\u53ef\u68c0\u67e5\uff0c\u652f\u6301\u79bb\u7ebf\u8fd0\u884c\u3002' },
+      { title: '\u5355\u4e00\u4e8c\u8fdb\u5236', desc: '<code>tma1-server</code> \u4ee5\u5355\u8fdb\u7a0b\u672c\u5730\u8fd0\u884c\uff0c\u5e76\u7ba1\u7406\u5185\u7f6e\u5b58\u50a8\u5f15\u64ce\u3002\u4e0d\u8981 Docker\uff0c\u4e0d\u8981\u7cfb\u7edf\u5305\uff0c\u6ca1\u6709\u8fd0\u884c\u65f6\u4f9d\u8d56\u3002' },
       { title: '\u4f60\u7684\u6570\u636e\uff0c\u4f60\u7684\u78c1\u76d8', desc: '\u5220\u6389 <code>~/.tma1/</code> \u5c31\u5168\u6ca1\u4e86\u3002\u6ca1\u6709\u6b8b\u7559\u7684\u4e91\u7aef\u72b6\u6001\uff0c\u6ca1\u6709\u8981\u6ce8\u9500\u7684\u8fdc\u7a0b\u8d26\u53f7\u3002' },
     ],
   },
@@ -143,8 +143,8 @@ export const zh: T = {
     kicker: 'FAQ', title: '\u5e38\u89c1\u95ee\u9898',
     items: [
       { q: '\u652f\u6301\u54ea\u4e9b agent\uff1f', a: '\u4efb\u4f55\u53d1\u9001 OpenTelemetry \u6570\u636e\u7684 agent\u3002Claude Code \u53d1\u9001 metrics \u548c logs\uff0cOpenClaw \u53d1\u9001 traces \u548c metrics\uff0c\u4efb\u4f55 GenAI \u8bed\u4e49\u89c4\u8303\u7684 OTel SDK \u5e94\u7528\u4e5f\u652f\u6301\u3002Dashboard \u81ea\u52a8\u68c0\u6d4b\u6570\u636e\u6e90\u5e76\u5c55\u793a\u5bf9\u5e94\u89c6\u56fe\u3002' },
-      { q: '\u80fd\u76f4\u63a5\u7528 SQL \u67e5\u5417\uff1f', a: '\u80fd\u3002\u8fd0\u884c <code>mysql -h 127.0.0.1 -P 14002</code> \u8fde\u63a5\uff0c\u6216\u8005\u6253\u5f00 GreptimeDB \u81ea\u5e26\u7684 dashboard <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code>\u3002\u539f\u59cb\u6570\u636e\u5728 <code>opentelemetry_traces</code> \u8868\uff0c\u805a\u5408\u6570\u636e\u5728 <code>tma1_*_1m</code> \u8868\u3002' },
-      { q: '\u5927\u6982\u5360\u591a\u5c11\u78c1\u76d8\uff1f', a: '\u770b\u4f60 agent \u7684\u4f7f\u7528\u91cf\u3002\u4e00\u822c\u573a\u666f\u6bcf\u6708\u51e0\u767e MB\uff0cGreptimeDB \u5bf9\u53ef\u89c2\u6d4b\u6570\u636e\u7684\u538b\u7f29\u6548\u7387\u5f88\u9ad8\u3002' },
+      { q: '\u80fd\u76f4\u63a5\u7528 SQL \u67e5\u5417\uff1f', a: '\u80fd\u3002\u8fd0\u884c <code>mysql -h 127.0.0.1 -P 14002</code> \u8fde\u63a5\u672c\u5730 SQL \u7aef\u53e3\uff0c\u6216\u6253\u5f00 <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> \u4f7f\u7528\u5185\u7f6e\u67e5\u8be2\u754c\u9762\u3002\u539f\u59cb\u6570\u636e\u5728 <code>opentelemetry_traces</code>\uff0c\u805a\u5408\u6570\u636e\u5728 <code>tma1_*_1m</code>\u3002' },
+      { q: '\u5927\u6982\u5360\u591a\u5c11\u78c1\u76d8\uff1f', a: '\u53d6\u51b3\u4e8e agent \u6d41\u91cf\u548c\u5bf9\u8bdd\u957f\u5ea6\u3002\u5e38\u89c1\u573a\u666f\u4e0b\uff0c\u6bcf\u6708\u5927\u7ea6\u51e0\u767e MB\u3002' },
     ],
   },
   quickstart: {
@@ -195,11 +195,11 @@ export const es: T = {
     kicker: 'Seguridad', title: 'Seguridad y privacidad',
     desc: 'Las conversaciones de agentes suelen tener contexto sensible. TMA1 mantiene todo en tu m\u00e1quina.',
     panel_title: 'C\u00f3mo se almacenan los datos',
-    panel_body: 'TMA1 escribe todos los traces y logs de conversaci\u00f3n en una instancia local de <a href="https://github.com/GreptimeTeam/greptimedb">GreptimeDB</a> \u2014 una base de datos de observabilidad open source (Apache-2.0). Los datos quedan en <code>~/.tma1/data/</code> y nunca salen de tu sistema de archivos.',
+    panel_body: 'TMA1 guarda traces y logs de conversaci\u00f3n en tu disco local, en <code>~/.tma1/data/</code>. No se sube nada a servicios remotos y pod\u00e9s inspeccionar o borrar los datos cuando quieras.',
     cards: [
       { title: 'Sin llamadas de red', desc: 'Despu\u00e9s de instalar, TMA1 no contacta ning\u00fan servicio externo. Sin anal\u00edticas, sin reportes de error, sin chequeos de actualizaci\u00f3n.' },
-      { title: 'Completamente open source', desc: 'TMA1 y GreptimeDB son Apache-2.0. Le\u00e9 el c\u00f3digo, audit\u00e1 el build, correlo sin conexi\u00f3n.' },
-      { title: 'Un solo binario', desc: '<code>tma1-server</code> gestiona un proceso GreptimeDB integrado. Sin Docker, sin paquetes del sistema, sin dependencias runtime.' },
+      { title: 'Completamente open source', desc: 'TMA1 usa licencia Apache-2.0. Le\u00e9 el c\u00f3digo, audit\u00e1 el build y corr\u00e9lo sin conexi\u00f3n.' },
+      { title: 'Un solo binario', desc: '<code>tma1-server</code> corre como un \u00fanico proceso local y administra su motor de almacenamiento integrado. Sin Docker, sin paquetes del sistema, sin dependencias runtime.' },
       { title: 'Tus datos, tu disco', desc: 'Borr\u00e1 <code>~/.tma1/</code> y todo desaparece. Sin estado hu\u00e9rfano en la nube, sin cuentas remotas que cerrar.' },
     ],
   },
@@ -207,8 +207,8 @@ export const es: T = {
     kicker: 'FAQ', title: 'Preguntas frecuentes',
     items: [
       { q: '\u00bfQu\u00e9 agentes soporta?', a: 'Cualquier agente que emita datos OpenTelemetry. Claude Code env\u00eda m\u00e9tricas y logs. OpenClaw env\u00eda traces y m\u00e9tricas. Cualquier SDK OTel con convenciones sem\u00e1nticas GenAI funciona de entrada. El dashboard detecta autom\u00e1ticamente la fuente de datos y muestra la vista correspondiente.' },
-      { q: '\u00bfSe pueden consultar los datos con SQL?', a: 'S\u00ed. Ejecut\u00e1 <code>mysql -h 127.0.0.1 -P 14002</code> para conectarte, o abr\u00ed el dashboard de GreptimeDB en <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code>. Los datos crudos est\u00e1n en <code>opentelemetry_traces</code>, los agregados en <code>tma1_*_1m</code>.' },
-      { q: '\u00bfCu\u00e1nto disco ocupa?', a: 'Depende de la actividad de tu agente. Un setup t\u00edpico usa unos cientos de MB al mes. GreptimeDB comprime datos de observabilidad de forma eficiente.' },
+      { q: '\u00bfSe pueden consultar los datos con SQL?', a: 'S\u00ed. Ejecut\u00e1 <code>mysql -h 127.0.0.1 -P 14002</code> para conectarte al endpoint SQL local, o abr\u00ed <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> para usar la interfaz de consultas integrada. Los datos crudos est\u00e1n en <code>opentelemetry_traces</code>; los agregados, en <code>tma1_*_1m</code>.' },
+      { q: '\u00bfCu\u00e1nto disco ocupa?', a: 'Depende de la actividad del agente y del largo de las conversaciones. En un uso t\u00edpico, unos cientos de MB por mes.' },
     ],
   },
   quickstart: {

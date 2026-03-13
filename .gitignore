@@ -25,6 +25,9 @@ tmp/
 # Go build / test artifacts
 server/bin/
 server/tma1-server
+server/.gocache/
+.gocache/
+.gomodcache/
 *.test
 *.out
 coverage.out
