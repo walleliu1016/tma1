@@ -15,6 +15,19 @@ import (
 //go:embed flows.sql
 var flowsSQL string
 
+// SetDatabaseTTL sets the default TTL on the public database so that
+// auto-created tables (OTel traces, logs, metrics) inherit it.
+// Idempotent — safe to call on every startup.
+func SetDatabaseTTL(httpPort int, ttl string, logger *slog.Logger) error {
+	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+	stmt := fmt.Sprintf("ALTER DATABASE public SET 'ttl'='%s'", ttl)
+	if err := execSQL(sqlURL, stmt); err != nil {
+		return fmt.Errorf("set database TTL: %w", err)
+	}
+	logger.Info("database default TTL set", "ttl", ttl)
+	return nil
+}
+
 // InitFlows runs the flows.sql DDL against the GreptimeDB HTTP SQL API.
 // It is idempotent (all statements use IF NOT EXISTS).
 // Flow creation (CREATE FLOW) failures are non-fatal — they are logged as warnings

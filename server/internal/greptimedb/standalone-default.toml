@@ -1,0 +1,69 @@
+# TMA1 default GreptimeDB configuration.
+# CLI flags still override data-home and bound ports.
+
+enable_telemetry = false
+max_in_flight_write_bytes = "128MB"
+max_concurrent_queries = 8
+init_regions_parallelism = 2
+
+[runtime]
+global_rt_size = 2
+compact_rt_size = 1
+
+[grpc]
+bind_addr = "127.0.0.1:14001"
+runtime_size = 1
+
+[mysql]
+enable = true
+runtime_size = 2
+
+[postgres]
+enable = false
+runtime_size = 1
+
+[opentsdb]
+enable = false
+
+[influxdb]
+enable = false
+
+[jaeger]
+enable = false
+
+[prom_store]
+enable = true
+with_metric_engine = true
+
+[flow]
+num_workers = 1
+
+[query]
+parallelism = 2
+memory_pool_size = "256MB"
+
+[[region_engine]]
+[region_engine.mito]
+num_workers = 2
+max_background_flushes = 1
+max_background_compactions = 1
+max_background_purges = 1
+experimental_compaction_memory_limit = "128MB"
+global_write_buffer_size = "128MB"
+global_write_buffer_reject_size = "256MB"
+sst_meta_cache_size = "32MB"
+vector_cache_size = "64MB"
+page_cache_size = "128MB"
+selector_result_cache_size = "32MB"
+manifest_cache_size = "64MB"
+scan_memory_limit = "256MB"
+
+[[region_engine]]
+[region_engine.file]
+
+[[region_engine]]
+[region_engine.metric]
+sparse_primary_key_encoding = true
+
+[memory]
+enable_heap_profiling = false

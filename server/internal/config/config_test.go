@@ -10,7 +10,7 @@ func TestLoadDefaults(t *testing.T) {
 	// Clear all TMA1_ env vars to test defaults.
 	for _, key := range []string{
 		"TMA1_HOST", "TMA1_PORT", "TMA1_DATA_DIR", "TMA1_GREPTIMEDB_VERSION",
-		"TMA1_GREPTIMEDB_HTTP_PORT", "TMA1_GREPTIMEDB_MYSQL_PORT", "TMA1_LOG_LEVEL",
+		"TMA1_GREPTIMEDB_HTTP_PORT", "TMA1_GREPTIMEDB_GRPC_PORT", "TMA1_GREPTIMEDB_MYSQL_PORT", "TMA1_LOG_LEVEL",
 	} {
 		t.Setenv(key, "")
 	}
@@ -46,6 +46,7 @@ func TestLoadDefaults(t *testing.T) {
 		want int
 	}{
 		{"GreptimeDBHTTPPort", cfg.GreptimeDBHTTPPort, 14000},
+		{"GreptimeDBGRPCPort", cfg.GreptimeDBGRPCPort, 14001},
 		{"GreptimeDBMySQLPort", cfg.GreptimeDBMySQLPort, 14002},
 	}
 	for _, tt := range intTests {
@@ -63,6 +64,7 @@ func TestLoadEnvOverrides(t *testing.T) {
 	t.Setenv("TMA1_DATA_DIR", "/tmp/tma1-test")
 	t.Setenv("TMA1_GREPTIMEDB_VERSION", "v0.12.0")
 	t.Setenv("TMA1_GREPTIMEDB_HTTP_PORT", "5000")
+	t.Setenv("TMA1_GREPTIMEDB_GRPC_PORT", "5001")
 	t.Setenv("TMA1_GREPTIMEDB_MYSQL_PORT", "5002")
 	t.Setenv("TMA1_LOG_LEVEL", "debug")
 
@@ -96,6 +98,7 @@ func TestLoadEnvOverrides(t *testing.T) {
 		want int
 	}{
 		{"GreptimeDBHTTPPort", cfg.GreptimeDBHTTPPort, 5000},
+		{"GreptimeDBGRPCPort", cfg.GreptimeDBGRPCPort, 5001},
 		{"GreptimeDBMySQLPort", cfg.GreptimeDBMySQLPort, 5002},
 	}
 	for _, tt := range intTests {

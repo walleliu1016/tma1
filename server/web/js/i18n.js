@@ -587,8 +587,10 @@ function setLocale(lang) {
   currentLocale = lang;
   localStorage.setItem('tma1-locale', lang);
   applyLocale();
-  // Reload current view to re-render dynamic content
-  if (typeof switchView === 'function' && typeof currentView !== 'undefined' && currentView) {
+  // Re-render dynamic content in the active view/tab so translated labels regenerate.
+  if (typeof refreshCurrentView === 'function') {
+    refreshCurrentView();
+  } else if (typeof switchView === 'function' && typeof currentView !== 'undefined' && currentView) {
     switchView(currentView, true);
   }
 }

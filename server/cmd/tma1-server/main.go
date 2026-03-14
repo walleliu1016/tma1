@@ -52,6 +52,7 @@ func main() {
 		BinPath:   binPath,
 		DataDir:   cfg.DataDir,
 		HTTPPort:  cfg.GreptimeDBHTTPPort,
+		GRPCPort:  cfg.GreptimeDBGRPCPort,
 		MySQLPort: cfg.GreptimeDBMySQLPort,
 		Logger:    logger,
 	})
@@ -65,12 +66,17 @@ func main() {
 		_ = gdb.Stop(stopCtx)
 	}()
 
-	// Step 3: ensure pricing table exists and seed model pricing.
+	// Step 3: set database default TTL (before pricing/flows so new tables inherit it).
+	if err := greptimedb.SetDatabaseTTL(cfg.GreptimeDBHTTPPort, cfg.DataTTL, logger); err != nil {
+		logger.Warn("set database TTL warning", "err", err)
+	}
+
+	// Step 4: ensure pricing table exists and seed model pricing.
 	if err := greptimedb.SeedPricing(cfg.GreptimeDBHTTPPort, logger); err != nil {
 		logger.Warn("seed pricing warning", "err", err)
 	}
 
-	// Step 4: start HTTP server (dashboard + API proxy).
+	// Step 5: start HTTP server (dashboard + API proxy).
 	srv := handler.New(cfg.GreptimeDBHTTPPort, cfg.Port, webFileSystem(), logger)
 	httpSrv := &http.Server{
 		Addr:         cfg.Host + ":" + cfg.Port,

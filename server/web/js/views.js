@@ -276,6 +276,11 @@ document.querySelectorAll('#cdx-tabs .tab').forEach(function(btn) {
 function onTimeRangeChange() {
   currentTimeRange = document.getElementById('time-range').value;
   updateHash();
+  refreshCurrentView();
+}
+
+function refreshCurrentView() {
+  if (!currentView) return;
   if (currentView === 'traces') {
     loadMetrics();
     var activeTab = document.querySelector('#view-traces .tab.active');

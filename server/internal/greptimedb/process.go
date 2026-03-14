@@ -25,6 +25,7 @@ type Config struct {
 	BinPath   string
 	DataDir   string
 	HTTPPort  int
+	GRPCPort  int
 	MySQLPort int
 	Logger    *slog.Logger
 }
@@ -38,20 +39,22 @@ func Start(cfg Config) (*Process, error) {
 		return nil, fmt.Errorf("greptimedb: create data dir: %w", err)
 	}
 
-	args := []string{
-		"standalone", "start",
-		"--data-home", dataPath,
-		fmt.Sprintf("--http-addr=127.0.0.1:%d", cfg.HTTPPort),
-		fmt.Sprintf("--mysql-addr=127.0.0.1:%d", cfg.MySQLPort),
-		// OTLP endpoint is part of the HTTP server in GreptimeDB standalone.
-		// The HTTP port serves both the API and OTLP (/v1/otlp).
+	configPath, err := ensureDefaultConfigFile(cfg.DataDir)
+	if err != nil {
+		return nil, err
 	}
+
+	args := startArgs(cfg, dataPath, configPath)
 
 	cmd := exec.Command(cfg.BinPath, args...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	cfg.Logger.Info("starting greptimedb", "bin", cfg.BinPath, "http_port", cfg.HTTPPort)
+	cfg.Logger.Info("starting greptimedb",
+		"bin", cfg.BinPath,
+		"http_port", cfg.HTTPPort,
+		"config_file", configPath,
+	)
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("greptimedb: start process: %w", err)
 	}

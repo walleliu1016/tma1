@@ -153,8 +153,10 @@ make test         # Run tests with race detector
 | `TMA1_DATA_DIR` | `~/.tma1` | Directory for GreptimeDB data + binaries |
 | `TMA1_GREPTIMEDB_VERSION` | `latest` | GreptimeDB version to download |
 | `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | GreptimeDB HTTP API + OTLP port |
+| `TMA1_GREPTIMEDB_GRPC_PORT` | `14001` | GreptimeDB gRPC port |
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
+| `TMA1_DATA_TTL` | `15d` | Default TTL for auto-created tables |
 
 ## Key design decisions
 
@@ -164,6 +166,8 @@ make test         # Run tests with race detector
 4. **No cloud.** All data stays on the user's machine.
 5. **No double-writing.** Flow engine derives metrics from traces. Agent sends OTel once.
 6. **Wide events.** `trace_id` joins spans + conversations. One click from token spike to full dialogue.
+
+On first start, tma1 writes a default GreptimeDB config to `~/.tma1/config/standalone.toml` and launches GreptimeDB with `-c`. That default keeps HTTP, MySQL, and Prometheus Remote Storage enabled, disables Postgres, InfluxDB, OpenTSDB, and Jaeger, and applies conservative local resource limits.
 
 ## Where to look
 

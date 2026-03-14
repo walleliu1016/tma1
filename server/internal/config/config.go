@@ -24,11 +24,17 @@ type Config struct {
 	// GreptimeDB HTTP API port (used for SQL queries, health checks, and OTLP ingestion).
 	GreptimeDBHTTPPort int
 
+	// GreptimeDB gRPC port.
+	GreptimeDBGRPCPort int
+
 	// GreptimeDB MySQL port (used for direct SQL connections).
 	GreptimeDBMySQLPort int
 
 	// LogLevel: debug, info, warn, error.
 	LogLevel string
+
+	// DataTTL is the default TTL for auto-created tables (e.g. "15d", "30d").
+	DataTTL string
 }
 
 // Load reads config from environment variables, with sensible defaults.
@@ -44,8 +50,10 @@ func Load() (*Config, error) {
 		DataDir:             env("TMA1_DATA_DIR", filepath.Join(home, ".tma1")),
 		GreptimeDBVersion:   env("TMA1_GREPTIMEDB_VERSION", "latest"),
 		GreptimeDBHTTPPort:  envInt("TMA1_GREPTIMEDB_HTTP_PORT", 14000),
+		GreptimeDBGRPCPort:  envInt("TMA1_GREPTIMEDB_GRPC_PORT", 14001),
 		GreptimeDBMySQLPort: envInt("TMA1_GREPTIMEDB_MYSQL_PORT", 14002),
 		LogLevel:            env("TMA1_LOG_LEVEL", "info"),
+		DataTTL:             env("TMA1_DATA_TTL", "15d"),
 	}
 
 	return cfg, nil

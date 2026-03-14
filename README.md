@@ -121,8 +121,11 @@ Implementation detail: TMA1 uses an embedded local GreptimeDB process managed by
 | `TMA1_DATA_DIR` | `~/.tma1` | Local data and binary directory |
 | `TMA1_GREPTIMEDB_VERSION` | `latest` | GreptimeDB version to download |
 | `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | Embedded database HTTP API + OTLP port |
+| `TMA1_GREPTIMEDB_GRPC_PORT` | `14001` | GreptimeDB gRPC port |
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
+
+On first start, TMA1 writes a default GreptimeDB config to `~/.tma1/config/standalone.toml`, then starts GreptimeDB with `-c`. The default keeps `http`, `mysql`, and Prometheus Remote Storage enabled, disables Postgres, InfluxDB, OpenTSDB, and Jaeger, and applies conservative local resource limits.
 
 ## Development
 

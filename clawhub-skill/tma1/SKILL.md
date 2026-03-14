@@ -138,6 +138,9 @@ This will:
 1. Download the `tma1-server` binary into `~/.tma1/bin/` (GreptimeDB is auto-downloaded on first start)
 2. Start `tma1-server` (which manages GreptimeDB and serves the dashboard)
 3. Print the dashboard URL: `http://localhost:14318`
+4. Generate GreptimeDB's default config at `~/.tma1/config/standalone.toml` on first start
+
+The generated config keeps HTTP, MySQL, Postgres, and Prometheus Remote Storage enabled. It disables unused protocol services such as InfluxDB, OpenTSDB, and Jaeger, and applies conservative local CPU and memory limits.
 
 Wait ~15 seconds for GreptimeDB to start, then verify:
 
@@ -312,6 +315,9 @@ SHOW TABLES;
 
 💾 YOUR DATA
 Stored locally in: ~/.tma1/data/
+
+GreptimeDB config: ~/.tma1/config/standalone.toml
+Edit this file if you want to tune GreptimeDB resource usage, then restart `tma1-server`.
 Never sent to any cloud service.
 
 ♻️ RESTART
@@ -547,7 +553,7 @@ ORDER BY input_tok DESC
 | Symptom | Fix |
 | --- | --- |
 | `tma1-server` not starting | macOS: check `~/Library/Logs/tma1-server.log`; Linux: `journalctl --user -u tma1-server`; verify port 14318 is free |
-| GreptimeDB not healthy | Wait longer; check port 14000 is free |
+| GreptimeDB not healthy | Wait longer; check port 14000 is free; inspect `~/.tma1/config/standalone.toml` if GreptimeDB was manually reconfigured |
 | No data in dashboard | Verify agent OTel config points to TMA1 (Claude Code/OpenClaw: `/v1/otlp`; Codex: separate `/v1/logs`, `/v1/traces`, `/v1/metrics`) and restart the agent |
 | Port conflict on 14000 | Set `TMA1_GREPTIMEDB_HTTP_PORT=14001` and update agent endpoint config |
 | Dashboard shows "GREPTIMEDB: unreachable" | GreptimeDB crashed; restart with `tma1-server` |
