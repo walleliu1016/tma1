@@ -22,7 +22,7 @@ the monolith buried on the moon, silently recording everything until you dig it 
 ## Quick Install
 
 ```bash
-curl -fsSL https://tma1.ai/install.sh | sh
+curl -fsSL https://tma1.ai/install.sh | bash
 ```
 
 Or build from source:

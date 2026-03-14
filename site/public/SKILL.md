@@ -76,7 +76,6 @@ Use this skill when the user wants to understand what their AI agent has been do
 ## When NOT to use this skill
 
 - The user wants persistent memory across sessions → use mem9 instead
-- The user already has TMA1 running and just wants to query data → use SQL directly
 
 ---
 
@@ -132,7 +131,7 @@ curl -sf http://localhost:14318/health && echo "RUNNING" || echo "NOT_RUNNING"
 `[AGENT]` Download and run the TMA1 installer:
 
 ```bash
-curl -fsSL https://tma1.ai/install.sh | sh
+curl -fsSL https://tma1.ai/install.sh | bash
 ```
 
 This will:
@@ -276,21 +275,40 @@ Translate into the user's language while keeping the structure.
 
 📊 DASHBOARD
 Open: http://localhost:14318
-Your agent's token usage, cost, and latency are now being recorded locally.
 
-🔍 EXAMPLE QUERIES
-Open the GreptimeDB query console at http://localhost:14000/dashboard
-and try these:
+🔌 QUERY API
+All SQL queries go through POST with JSON body:
 
--- Today's cost by model
-SELECT "span_attributes.gen_ai.request.model" AS model,
-       COUNT(*) AS requests,
-       SUM(CAST("span_attributes.gen_ai.usage.input_tokens" AS DOUBLE)) AS input_tok,
-       SUM(CAST("span_attributes.gen_ai.usage.output_tokens" AS DOUBLE)) AS output_tok
-FROM opentelemetry_traces
-WHERE "span_attributes.gen_ai.system" IS NOT NULL
-  AND timestamp > NOW() - INTERVAL '1 day'
-GROUP BY model ORDER BY input_tok DESC;
+  curl -s -X POST http://localhost:14318/api/query \
+    -H 'Content-Type: application/json' \
+    -d '{"sql": "SHOW TABLES"}'
+
+Note: table names containing uppercase letters (e.g. "claude_code_cost_usage_USD_total")
+must be quoted with double quotes in SQL.
+
+🔍 QUICK QUERIES
+
+-- Claude Code: today's cost by model
+SELECT model, ROUND(MAX(greptime_value), 4) AS cost_usd
+FROM "claude_code_cost_usage_USD_total"
+WHERE greptime_timestamp >= DATE_TRUNC('day', NOW())
+GROUP BY model ORDER BY cost_usd DESC;
+
+-- Codex: recent requests
+SELECT timestamp, json_get_string(log_attributes, 'model') AS model,
+  json_get_int(log_attributes, 'input_token_count') AS input_tok,
+  json_get_int(log_attributes, 'output_token_count') AS output_tok
+FROM opentelemetry_logs WHERE scope_name LIKE 'codex_%'
+  AND json_get_int(log_attributes, 'input_token_count') IS NOT NULL
+ORDER BY timestamp DESC LIMIT 10;
+
+-- OpenClaw: token usage by model
+SELECT model, token_type, SUM(greptime_value) AS tokens
+FROM openclaw_tokens_total WHERE ts > NOW() - INTERVAL '1 day'
+GROUP BY model, token_type ORDER BY tokens DESC;
+
+-- Any agent: list all tables
+SHOW TABLES;
 
 💾 YOUR DATA
 Stored locally in: ~/.tma1/data/
@@ -298,7 +316,9 @@ Never sent to any cloud service.
 
 ♻️ RESTART
 If TMA1 stops, run: tma1-server
-Or reinstall: curl -fsSL https://tma1.ai/install.sh | sh
+Or reinstall: curl -fsSL https://tma1.ai/install.sh | bash
+
+💡 For more queries, read: https://tma1.ai/SKILL.md
 ```
 
 ---
@@ -323,6 +343,7 @@ SHOW TABLES
 ```
 
 Check which tables exist:
+- `opentelemetry_logs` → logs from Claude Code (`body = 'claude_code.*'`) or Codex (`scope_name LIKE 'codex_%'`)
 - `claude_code_cost_usage_USD_total` → Claude Code metrics
 - `codex_tokens_total` → Codex metrics
 - `opentelemetry_traces` → traces from Codex, OpenClaw, or GenAI SDK
@@ -430,6 +451,47 @@ ORDER BY uses DESC
 
 ---
 
+### Codex Queries (logs + metrics)
+
+**Recent LLM requests:**
+```sql
+SELECT timestamp,
+       json_get_string(log_attributes, 'model') AS model,
+       json_get_int(log_attributes, 'input_token_count') AS input_tok,
+       json_get_int(log_attributes, 'output_token_count') AS output_tok
+FROM opentelemetry_logs
+WHERE scope_name LIKE 'codex_%'
+  AND json_get_int(log_attributes, 'input_token_count') IS NOT NULL
+  AND timestamp > NOW() - INTERVAL '1 day'
+ORDER BY timestamp DESC
+LIMIT 20
+```
+
+**Tool usage:**
+```sql
+SELECT json_get_string(log_attributes, 'tool_name') AS tool,
+       COUNT(*) AS uses,
+       SUM(CASE WHEN json_get_string(log_attributes, 'success') = 'true' THEN 1 ELSE 0 END) AS ok,
+       ROUND(AVG(json_get_float(log_attributes, 'duration_ms'))) AS avg_ms
+FROM opentelemetry_logs
+WHERE scope_name LIKE 'codex_%'
+  AND json_get_string(log_attributes, 'tool_name') IS NOT NULL
+  AND timestamp > NOW() - INTERVAL '1 day'
+GROUP BY tool
+ORDER BY uses DESC
+```
+
+**Token usage (from metrics, if available):**
+```sql
+SELECT model, token_type, SUM(greptime_value) AS tokens
+FROM codex_tokens_total
+WHERE greptime_timestamp > NOW() - INTERVAL '1 day'
+GROUP BY model, token_type
+ORDER BY tokens DESC
+```
+
+---
+
 ### GenAI Traces Queries (other agents)
 
 **Recent traces:**
@@ -486,7 +548,7 @@ ORDER BY input_tok DESC
 | --- | --- |
 | `tma1-server` not starting | macOS: check `~/Library/Logs/tma1-server.log`; Linux: `journalctl --user -u tma1-server`; verify port 14318 is free |
 | GreptimeDB not healthy | Wait longer; check port 14000 is free |
-| No data in dashboard | Verify agent OTel config points to `http://localhost:14318/v1/otlp` and restart the agent |
+| No data in dashboard | Verify agent OTel config points to TMA1 (Claude Code/OpenClaw: `/v1/otlp`; Codex: separate `/v1/logs`, `/v1/traces`, `/v1/metrics`) and restart the agent |
 | Port conflict on 14000 | Set `TMA1_GREPTIMEDB_HTTP_PORT=14001` and update agent endpoint config |
 | Dashboard shows "GREPTIMEDB: unreachable" | GreptimeDB crashed; restart with `tma1-server` |
 

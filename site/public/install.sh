@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TMA1 installer — downloads the latest tma1-server binary and registers it as a service.
-# Usage: curl -fsSL https://tma1.ai/install.sh | sh
+# Usage: curl -fsSL https://tma1.ai/install.sh | bash
 #
 # Uninstall:
 #   macOS:  launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.tma1.server.plist && rm ~/Library/LaunchAgents/ai.tma1.server.plist

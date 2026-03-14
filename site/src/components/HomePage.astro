@@ -8,7 +8,7 @@ interface Props {
 const { t } = Astro.props;
 const lang = t.lang;
 const onboardingCmd = 'Read https://tma1.ai/SKILL.md and follow the instructions to install and configure TMA1 for your AI agent';
-const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | sh';
+const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | bash';
 ---
 
 <div class="container">
@@ -187,7 +187,7 @@ const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | sh';
         </div>
         <div class="terminal-body">
           <div class="line comment"># Install TMA1</div>
-          <div class="line"><span class="prompt">$</span> <span class="cmd">curl -fsSL https://tma1.ai/install.sh | sh</span></div>
+          <div class="line"><span class="prompt">$</span> <span class="cmd">curl -fsSL https://tma1.ai/install.sh | bash</span></div>
           <div class="line">&nbsp;</div>
           <div class="line comment"># Start TMA1</div>
           <div class="line"><span class="prompt">$</span> <span class="cmd">tma1-server</span></div>

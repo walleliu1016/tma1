@@ -22,7 +22,7 @@ If this returns `{"status":"ok"}`, TMA1 is already running. Skip to Step 4.
 Download and install the tma1-server binary:
 
 ```bash
-curl -fsSL https://tma1.ai/install.sh | sh
+curl -fsSL https://tma1.ai/install.sh | bash
 ```
 
 This installs the binary to `~/.tma1/bin/tma1-server`.
@@ -75,6 +75,36 @@ Tell the user to set the OTel exporter endpoint. The exact method depends on the
 
 Claude Code exports metrics and logs (not traces). The metrics/logs exporters must be explicitly enabled.
 
+**Codex** — add to `~/.codex/config.toml`:
+```toml
+[otel]
+log_user_prompt = true
+
+[otel.exporter.otlp-http]
+endpoint = "http://localhost:14318/v1/logs"
+protocol = "binary"
+
+[otel.trace_exporter.otlp-http]
+endpoint = "http://localhost:14318/v1/traces"
+protocol = "binary"
+
+[otel.metrics_exporter.otlp-http]
+endpoint = "http://localhost:14318/v1/metrics"
+protocol = "binary"
+```
+
+Codex uses separate exporters for logs, traces, and metrics. Restart Codex after config changes.
+
+**OpenClaw**:
+```bash
+openclaw config set diagnostics.enabled true
+openclaw config set diagnostics.otel.enabled true
+openclaw config set diagnostics.otel.endpoint http://localhost:14318/v1/otlp
+openclaw config set diagnostics.otel.traces true
+openclaw config set diagnostics.otel.metrics true
+openclaw gateway restart
+```
+
 **Other OTel-compatible agents** (standard GenAI SDK) — typically export traces:
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14318/v1/otlp
@@ -88,14 +118,24 @@ After the user runs at least one agent interaction with the endpoint configured:
 ```bash
 curl -s -X POST http://localhost:14318/api/query \
   -H 'Content-Type: application/json' \
-  -d '{"sql": "SELECT COUNT(*) AS span_count FROM opentelemetry_traces"}' 2>/dev/null | python3 -m json.tool
+  -d '{"sql": "SHOW TABLES"}' 2>/dev/null | python3 -m json.tool
 ```
 
-If `span_count > 0`, data is flowing correctly.
+If you see `opentelemetry_logs`, `opentelemetry_traces`, `openclaw_*`, or `claude_code_*` tables, data is flowing.
 
 ## Handoff
 
 Tell the user:
-- Dashboard: http://localhost:14318
-- OTel base endpoint: http://localhost:14318/v1/otlp (SDK auto-appends /v1/traces etc.)
-- Use `/tma1` to query observability data inline without opening the dashboard.
+
+```
+Dashboard: http://localhost:14318
+
+Query API — all SQL queries go through POST with JSON body:
+  curl -s -X POST http://localhost:14318/api/query \
+    -H 'Content-Type: application/json' \
+    -d '{"sql": "SHOW TABLES"}'
+
+OTel endpoint: http://localhost:14318/v1/otlp
+Use /tma1 to query observability data inline without opening the dashboard.
+For more queries: https://tma1.ai/SKILL.md
+```
