@@ -140,20 +140,25 @@ async function switchView(viewId, skipHash) {
   currentView = viewId;
   var viewEl = document.getElementById('view-' + viewId);
   if (viewEl) {
-    viewEl.style.display = 'block';
+    var hasData = true;
     if (viewId === 'claude-code') {
-      cc_loadCards();
-      cc_loadOverview();
+      hasData = await cc_loadCards();
+      if (hasData) cc_loadOverview();
     } else if (viewId === 'codex') {
-      cdx_loadCards();
-      cdx_loadOverview();
+      hasData = await cdx_loadCards();
+      if (hasData) cdx_loadOverview();
     } else if (viewId === 'openclaw') {
-      oc_loadCards();
-      oc_loadOverview();
+      hasData = await oc_loadCards();
+      if (hasData) oc_loadOverview();
     } else if (viewId === 'traces') {
       await loadPricing();
-      loadMetrics();
-      loadOverviewCharts();
+      hasData = await loadMetrics();
+      if (hasData) loadOverviewCharts();
+    }
+    if (hasData) {
+      viewEl.style.display = 'block';
+    } else {
+      document.getElementById('setup-notice').style.display = 'block';
     }
   }
   checkDataFreshness();
@@ -318,28 +323,42 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
-function refreshCurrentView() {
+async function refreshCurrentView() {
   if (!currentView) return;
+  var hasData = true;
   if (currentView === 'traces') {
-    loadMetrics();
-    var activeTab = document.querySelector('#view-traces .tab.active');
-    var tabName = activeTab ? activeTab.dataset.tab : null;
-    if (tabName) onTabChange(tabName);
+    hasData = await loadMetrics();
+    if (hasData) {
+      var activeTab = document.querySelector('#view-traces .tab.active');
+      if (activeTab) onTabChange(activeTab.dataset.tab);
+    }
   } else if (currentView === 'openclaw') {
-    oc_loadCards();
-    var activeTab3 = document.querySelector('#oc-tabs .tab.active');
-    var tabName3 = activeTab3 ? activeTab3.dataset.octab : null;
-    if (tabName3) oc_onTabChange(tabName3);
+    hasData = await oc_loadCards();
+    if (hasData) {
+      var activeTab3 = document.querySelector('#oc-tabs .tab.active');
+      if (activeTab3) oc_onTabChange(activeTab3.dataset.octab);
+    }
   } else if (currentView === 'claude-code') {
-    cc_loadCards();
-    var activeTab2 = document.querySelector('#cc-tabs .tab.active');
-    var tabName2 = activeTab2 ? activeTab2.dataset.cctab : null;
-    if (tabName2) cc_onTabChange(tabName2);
+    hasData = await cc_loadCards();
+    if (hasData) {
+      var activeTab2 = document.querySelector('#cc-tabs .tab.active');
+      if (activeTab2) cc_onTabChange(activeTab2.dataset.cctab);
+    }
   } else if (currentView === 'codex') {
-    cdx_loadCards();
-    var activeCodexTab = document.querySelector('#cdx-tabs .tab.active');
-    var codexTabName = activeCodexTab ? activeCodexTab.dataset.cdxtab : null;
-    if (codexTabName) cdx_onTabChange(codexTabName);
+    hasData = await cdx_loadCards();
+    if (hasData) {
+      var activeCodexTab = document.querySelector('#cdx-tabs .tab.active');
+      if (activeCodexTab) cdx_onTabChange(activeCodexTab.dataset.cdxtab);
+    }
+  }
+  var viewEl = document.getElementById('view-' + currentView);
+  var setupEl = document.getElementById('setup-notice');
+  if (hasData) {
+    if (viewEl) viewEl.style.display = 'block';
+    if (setupEl) setupEl.style.display = 'none';
+  } else {
+    if (viewEl) viewEl.style.display = 'none';
+    if (setupEl) setupEl.style.display = 'block';
   }
 }
 

@@ -195,15 +195,18 @@ async function cdx_loadCards() {
       query(latencySQL),
       query(ttftSQL),
     ]);
+    var reqCount = Number(rows(results[2])?.[0]?.[0]) || 0;
     document.getElementById('cdx-val-cost').textContent = fmtCost(rows(results[0])?.[0]?.[0]);
     document.getElementById('cdx-val-tokens').textContent = fmtNum(rows(results[1])?.[0]?.[0]);
-    document.getElementById('cdx-val-requests').textContent = fmtNum(rows(results[2])?.[0]?.[0]);
+    document.getElementById('cdx-val-requests').textContent = fmtNum(reqCount);
     document.getElementById('cdx-val-latency').textContent = fmtDurMsPrecise(rows(results[3])?.[0]?.[0]);
     document.getElementById('cdx-val-ttft').textContent = fmtDurMsPrecise(rows(results[4])?.[0]?.[0]);
+    return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = 'Codex metrics error: ' + err.message;
+    return false;
   }
 }
 

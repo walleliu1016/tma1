@@ -58,8 +58,8 @@ async function loadMetrics() {
       "WHERE \"span_attributes.gen_ai.system\" IS NOT NULL " +
       "AND timestamp > NOW() - INTERVAL '" + intervalSQL() + "'"
     );
-    var reqVal = rows(reqRes)?.[0]?.[0];
-    document.getElementById('val-requests').textContent = fmtNum(reqVal);
+    var reqCount = Number(rows(reqRes)?.[0]?.[0]) || 0;
+    document.getElementById('val-requests').textContent = fmtNum(reqCount);
 
     // avg latency (raw trace range query)
     var latRes = await query(
@@ -71,10 +71,12 @@ async function loadMetrics() {
     var latVal = rows(latRes)?.[0]?.[0];
     document.getElementById('val-latency').textContent = latVal != null ? fmtMs(latVal) : '\u2014';
 
+    return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = t('error.greptimedb') + err.message;
+    return false;
   }
 }
 

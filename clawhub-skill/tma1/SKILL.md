@@ -160,7 +160,11 @@ If not healthy after 30 seconds, something is wrong with the install. Ask the us
 
 #### OpenClaw
 
+First install and enable the diagnostics-otel plugin, then configure and restart:
+
 ```bash
+openclaw plugins install @openclaw/diagnostics-otel
+openclaw plugins enable diagnostics-otel
 openclaw config set diagnostics.enabled true
 openclaw config set diagnostics.otel.enabled true
 openclaw config set diagnostics.otel.endpoint http://localhost:14318/v1/otlp

@@ -124,15 +124,18 @@ async function cc_loadCards() {
       query("SELECT COUNT(*) AS v FROM opentelemetry_logs WHERE body = 'claude_code.api_request' AND timestamp > NOW() - INTERVAL '" + iv + "'"),
       query("SELECT ROUND(AVG(json_get_float(log_attributes, 'duration_ms')), 0) AS v FROM opentelemetry_logs WHERE body = 'claude_code.api_request' AND timestamp > NOW() - INTERVAL '" + iv + "'"),
     ]);
+    var reqCount = Number(rows(results[2])?.[0]?.[0]) || 0;
     document.getElementById('cc-val-cost').textContent = fmtCost(rows(results[0])?.[0]?.[0]);
     document.getElementById('cc-val-tokens').textContent = fmtNum(rows(results[1])?.[0]?.[0]);
-    document.getElementById('cc-val-requests').textContent = fmtNum(rows(results[2])?.[0]?.[0]);
+    document.getElementById('cc-val-requests').textContent = fmtNum(reqCount);
     var latVal = rows(results[3])?.[0]?.[0];
     document.getElementById('cc-val-latency').textContent = fmtDurMs(latVal);
+    return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = t('error.cc_metrics') + err.message;
+    return false;
   }
 }
 

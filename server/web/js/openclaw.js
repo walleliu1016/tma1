@@ -104,15 +104,18 @@ async function oc_loadCards() {
         "WHERE " + OC_MODEL_SPAN + " AND timestamp > NOW() - INTERVAL '" + iv + "'"
       ),
     ]);
+    var reqCount = Number(rows(results[2])?.[0]?.[0]) || 0;
     document.getElementById('oc-val-cost').textContent = fmtCost(rows(results[0])?.[0]?.[0]);
     document.getElementById('oc-val-tokens').textContent = fmtNum(rows(results[1])?.[0]?.[0]);
-    document.getElementById('oc-val-requests').textContent = fmtNum(rows(results[2])?.[0]?.[0]);
+    document.getElementById('oc-val-requests').textContent = fmtNum(reqCount);
     var latVal = rows(results[3])?.[0]?.[0];
     document.getElementById('oc-val-latency').textContent = fmtDurMs(latVal);
+    return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = 'OpenClaw metrics error: ' + err.message;
+    return false;
   }
 }
 
