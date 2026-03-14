@@ -47,7 +47,7 @@ export const en: T = {
   ],
   features: {
     kicker: 'Features', title: 'Observability without the overhead',
-    desc: 'One dashboard for everything your agents do. No Grafana, no cloud, no YAML.',
+    desc: 'Four dedicated views \u2014 Claude Code, Codex, OpenClaw, and OTel GenAI \u2014 auto-detected from your data. No Grafana, no cloud, no YAML.',
     cards: [
       { num: '01', title: 'Cost breakdown', desc: 'Which model costs the most? Which conversation burned through your budget? Token counts and estimated cost per model, with burn-rate projections and cache efficiency analysis.' },
       { num: '02', title: 'Latency tracking', desc: 'When your agent feels slow, is it the model or the tool calls? p50 and p95 latency percentiles per model, plus tool performance tables with call counts and success rates.' },
@@ -114,7 +114,7 @@ export const zh: T = {
   ],
   features: {
     kicker: '\u529f\u80fd', title: '\u8f7b\u91cf\u53ef\u89c2\u6d4b',
-    desc: '\u4e00\u4e2a dashboard \u770b\u5b8c agent \u7684\u4e00\u5207\u3002\u4e0d\u9700\u8981 Grafana\uff0c\u4e0d\u9700\u8981\u4e91\u670d\u52a1\uff0c\u4e0d\u9700\u8981\u5199 YAML\u3002',
+    desc: '\u56db\u4e2a\u4e13\u5c5e\u89c6\u56fe\u2014\u2014Claude Code\u3001Codex\u3001OpenClaw\u3001OTel GenAI\u2014\u2014\u6839\u636e\u6570\u636e\u81ea\u52a8\u8bc6\u522b\u3002\u4e0d\u9700\u8981 Grafana\uff0c\u4e0d\u9700\u8981\u4e91\u670d\u52a1\uff0c\u4e0d\u9700\u8981\u5199 YAML\u3002',
     cards: [
       { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u54ea\u4e2a\u6a21\u578b\u6700\u8d35\uff1f\u54ea\u4e2a\u5bf9\u8bdd\u628a\u9884\u7b97\u70e7\u5149\u4e86\uff1f\u6309\u6a21\u578b\u8ffd\u8e2a token \u548c\u8d39\u7528\uff0c\u652f\u6301 burn rate \u9884\u6d4b\u548c\u7f13\u5b58\u6548\u7387\u5206\u6790\u3002' },
       { num: '02', title: '\u5ef6\u8fdf\u8ffd\u8e2a', desc: 'Agent \u53d8\u6162\u4e86\uff0c\u662f\u6a21\u578b\u7684\u95ee\u9898\u8fd8\u662f\u5de5\u5177\u8c03\u7528\u7684\u95ee\u9898\uff1f\u6bcf\u4e2a\u6a21\u578b\u7684 p50\u3001p95 \u5ef6\u8fdf\uff0c\u52a0\u4e0a\u5de5\u5177\u6027\u80fd\u8868\u548c\u6210\u529f\u7387\u3002' },
@@ -181,7 +181,7 @@ export const es: T = {
   ],
   features: {
     kicker: 'Funcionalidades', title: 'Observabilidad sin complicaciones',
-    desc: 'Un dashboard para todo lo que hacen tus agentes. Sin Grafana, sin nube, sin YAML.',
+    desc: 'Cuatro vistas dedicadas \u2014 Claude Code, Codex, OpenClaw y OTel GenAI \u2014 detectadas autom\u00e1ticamente de tus datos. Sin Grafana, sin nube, sin YAML.',
     cards: [
       { num: '01', title: 'Desglose de costos', desc: '\u00bfQu\u00e9 modelo cuesta m\u00e1s? \u00bfQu\u00e9 conversaci\u00f3n quem\u00f3 tu presupuesto? Tokens y costo estimado por modelo, con proyecciones de burn rate y an\u00e1lisis de eficiencia de cach\u00e9.' },
       { num: '02', title: 'Seguimiento de latencia', desc: 'Cuando tu agente se siente lento, \u00bfes el modelo o las herramientas? Percentiles p50 y p95 por modelo, m\u00e1s tablas de rendimiento de herramientas con conteos y tasas de \u00e9xito.' },
