@@ -3,7 +3,7 @@ export interface T {
   title: string;
   description: string;
   nav: { features: string; how: string; security: string };
-  hero: { h1_1: string; h1_2: string; subtitle: string };
+  hero: { hook: string; h1_1: string; h1_2: string; subtitle: string };
   onboarding: { label: string; manual: string };
   highlights: Array<{ title: string; desc: string }>;
   features: {
@@ -34,26 +34,27 @@ export const en: T = {
   description: 'Local observability for your AI agents. Tokens, cost, latency, and conversation replay \u2014 on your machine.',
   nav: { features: 'Features', how: 'How it works', security: 'Security' },
   hero: {
+    hook: 'I needed to know what my agents cost \u2014 and whether they were doing anything dangerous.',
     h1_1: 'Know what your agent is doing',
     h1_2: 'and what it costs',
-    subtitle: 'Local observability for your AI agents. Every LLM call \u2014 tokens, cost, latency \u2014 silently recorded on your machine.',
+    subtitle: 'Tokens, cost, latency \u2014 every LLM call, recorded <em>locally</em>. Click a spike to see which conversation is burning money.',
   },
   onboarding: { label: 'AGENT ONBOARDING', manual: 'Manual install' },
   highlights: [
-    { title: 'Inspect every call', desc: 'Click any LLM call to see tokens, cost, latency, and \u2014 where supported \u2014 the full prompt and response.' },
-    { title: 'Track the cost', desc: 'Token usage and cost by model, over time. Spot the expensive calls.' },
-    { title: 'Runs on your machine', desc: 'All data in <code>~/.tma1/</code>. No cloud, no accounts, no external services.' },
+    { title: 'See what happened', desc: 'An agent ran for 20 minutes. What did it do? Open the dashboard, click a trace, read the full conversation.' },
+    { title: 'Catch the expensive calls', desc: 'That $40 session last Tuesday \u2014 was it one huge context window or a runaway retry loop? Now you know.' },
+    { title: 'Nothing leaves your machine', desc: 'Your agent sees your codebase, your env vars, your keys. That data stays in <code>~/.tma1/</code>, never uploaded anywhere.' },
   ],
   features: {
     kicker: 'Features', title: 'Observability without the overhead',
-    desc: 'Cost, latency, security, and errors \u2014 in one local dashboard.',
+    desc: 'One dashboard for everything your agents do. No Grafana, no cloud, no YAML.',
     cards: [
-      { num: '01', title: 'Cost breakdown', desc: 'Token counts and estimated cost per model, tracked over time. See which models and conversations cost the most, with burn-rate projections and cache efficiency analysis.' },
-      { num: '02', title: 'Latency tracking', desc: 'p50 and p95 latency percentiles for every model. Tool performance tables show call counts, success rates, and average response times.' },
-      { num: '03', title: 'Security monitoring', desc: 'Detects shell commands, external fetches, and potential prompt injections in GenAI traces. Tracks webhook errors, stuck sessions, and channel health for OpenClaw.' },
-      { num: '04', title: 'Conversation replay', desc: 'For agents that emit conversation content (like Claude Code), click a trace to read the actual dialogue \u2014 handy for debugging or auditing what your agent said.' },
-      { num: '05', title: 'Anomaly detection', desc: 'Flags calls with unusual token counts, high error rates, or slow responses. Catch runaway loops before they pile up cost.' },
-      { num: '06', title: 'Full-text search', desc: 'Search across all recorded events and traces. Find a specific model, trace an error back to a call, or filter by tool name.' },
+      { num: '01', title: 'Cost breakdown', desc: 'Which model costs the most? Which conversation burned through your budget? Token counts and estimated cost per model, with burn-rate projections and cache efficiency analysis.' },
+      { num: '02', title: 'Latency tracking', desc: 'When your agent feels slow, is it the model or the tool calls? p50 and p95 latency percentiles per model, plus tool performance tables with call counts and success rates.' },
+      { num: '03', title: 'Security monitoring', desc: 'Your agent can run shell commands, fetch URLs, and be fed injected prompts. TMA1 flags all of it. Tracks webhook errors, stuck sessions, and channel health for OpenClaw.' },
+      { num: '04', title: 'Conversation replay', desc: 'Your agent just edited 15 files. What was it thinking? Click a trace to read the full dialogue \u2014 handy for debugging or auditing what your agent did.' },
+      { num: '05', title: 'Anomaly detection', desc: 'An agent stuck in a retry loop can burn hundreds of dollars. TMA1 flags unusual token counts, high error rates, and slow responses before costs pile up.' },
+      { num: '06', title: 'Full-text search', desc: 'Search everything. Find a specific model, trace an error back to a call, or filter by tool name.' },
     ],
   },
   how: {
@@ -67,7 +68,7 @@ export const en: T = {
   },
   security: {
     kicker: 'Security', title: 'Security & Privacy',
-    desc: 'Agent conversations often contain sensitive context. TMA1 keeps everything on your machine.',
+    desc: 'Your agent reads your codebase, your API keys, your infrastructure. Sending that to a cloud observability service defeats the purpose. Everything stays local.',
     panel_title: 'How data is stored',
     panel_body: 'TMA1 stores traces and conversation logs on your local disk in <code>~/.tma1/data/</code>. Nothing is uploaded to remote services, and you can inspect or delete the data at any time.',
     cards: [
@@ -100,26 +101,27 @@ export const zh: T = {
   description: 'AI agent \u672c\u5730\u53ef\u89c2\u6d4b\u3002Token\u3001\u8d39\u7528\u3001\u5ef6\u8fdf\u3001\u5bf9\u8bdd\u56de\u653e\u2014\u2014\u5168\u90e8\u5728\u4f60\u7684\u673a\u5668\u4e0a\u3002',
   nav: { features: '\u529f\u80fd', how: '\u5de5\u4f5c\u539f\u7406', security: '\u5b89\u5168' },
   hero: {
+    hook: '\u6211\u60f3\u77e5\u9053 agent \u5230\u5e95\u82b1\u4e86\u591a\u5c11\u94b1\uff0c\u6709\u6ca1\u6709\u5728\u641e\u5371\u9669\u64cd\u4f5c\u3002',
     h1_1: '\u4f60\u7684 agent \u5728\u505a\u4ec0\u4e48',
     h1_2: '\u82b1\u4e86\u591a\u5c11\u94b1',
-    subtitle: 'AI agent \u7684\u672c\u5730\u53ef\u89c2\u6d4b\u65b9\u6848\u3002\u6bcf\u6b21 LLM \u8c03\u7528\u7684 token\u3001\u8d39\u7528\u3001\u5ef6\u8fdf\u2014\u2014\u9759\u9ed8\u8bb0\u5f55\u5728\u4f60\u7684\u673a\u5668\u4e0a\u3002',
+    subtitle: 'Token\u3001\u8d39\u7528\u3001\u5ef6\u8fdf\u2014\u2014\u6bcf\u6b21 LLM \u8c03\u7528\uff0c<em>\u672c\u5730</em>\u8bb0\u5f55\u3002\u70b9\u5f00\u4e00\u4e2a\u5c16\u5cf0\uff0c\u770b\u54ea\u4e2a\u5bf9\u8bdd\u5728\u70e7\u94b1\u3002',
   },
   onboarding: { label: 'AGENT \u63a5\u5165', manual: '\u624b\u52a8\u5b89\u88c5' },
   highlights: [
-    { title: '\u68c0\u89c6\u6bcf\u6b21\u8c03\u7528', desc: '\u70b9\u51fb\u4efb\u610f\u4e00\u6b21 LLM \u8c03\u7528\uff0c\u67e5\u770b token\u3001\u8d39\u7528\u3001\u5ef6\u8fdf\uff0c\u4ee5\u53ca\uff08\u5982\u679c agent \u652f\u6301\uff09\u5b8c\u6574\u7684 prompt \u548c response\u3002' },
-    { title: '\u8ffd\u8e2a\u8d39\u7528', desc: '\u6309\u6a21\u578b\u3001\u6309\u65f6\u95f4\u6bb5\u7edf\u8ba1 token \u7528\u91cf\u548c\u8d39\u7528\u3002\u4e00\u773c\u770b\u51fa\u54ea\u4e9b\u8c03\u7528\u6700\u8d35\u3002' },
-    { title: '\u6570\u636e\u4e0d\u51fa\u672c\u673a', desc: '\u6240\u6709\u6570\u636e\u5b58\u5728 <code>~/.tma1/</code>\u3002\u4e0d\u9700\u8981\u4e91\u8d26\u53f7\uff0c\u4e0d\u9700\u8981\u5916\u90e8\u670d\u52a1\u3002' },
+    { title: '\u770b\u770b\u53d1\u751f\u4e86\u4ec0\u4e48', desc: '\u4e00\u4e2a agent \u8dd1\u4e86 20 \u5206\u949f\u3002\u5b83\u5e72\u4e86\u4ec0\u4e48\uff1f\u6253\u5f00 dashboard\uff0c\u70b9\u5f00\u4e00\u6761 trace\uff0c\u770b\u5b8c\u6574\u5bf9\u8bdd\u3002' },
+    { title: '\u6293\u4f4f\u70e7\u94b1\u7684\u8c03\u7528', desc: '\u4e0a\u5468\u4e8c\u90a3\u4e2a $40 \u7684 session\u2014\u2014\u662f context window \u592a\u5927\u8fd8\u662f\u91cd\u8bd5\u6b7b\u5faa\u73af\uff1f\u73b0\u5728\u4e00\u773c\u770b\u51fa\u6765\u3002' },
+    { title: '\u6570\u636e\u4e0d\u51fa\u672c\u673a', desc: '\u4f60\u7684 agent \u80fd\u770b\u5230\u4ee3\u7801\u3001\u73af\u5883\u53d8\u91cf\u3001\u5bc6\u94a5\u3002\u8fd9\u4e9b\u6570\u636e\u53ea\u7559\u5728 <code>~/.tma1/</code>\uff0c\u4e0d\u4f1a\u4e0a\u4f20\u4efb\u4f55\u5730\u65b9\u3002' },
   ],
   features: {
     kicker: '\u529f\u80fd', title: '\u8f7b\u91cf\u53ef\u89c2\u6d4b',
-    desc: '\u8d39\u7528\u3001\u5ef6\u8fdf\u3001\u5b89\u5168\u3001\u9519\u8bef\u2014\u2014\u4e00\u4e2a\u672c\u5730 dashboard \u641e\u5b9a\u3002',
+    desc: '\u4e00\u4e2a dashboard \u770b\u5b8c agent \u7684\u4e00\u5207\u3002\u4e0d\u9700\u8981 Grafana\uff0c\u4e0d\u9700\u8981\u4e91\u670d\u52a1\uff0c\u4e0d\u9700\u8981\u5199 YAML\u3002',
     cards: [
-      { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u6309\u6a21\u578b\u8ffd\u8e2a token \u7528\u91cf\u548c\u9884\u4f30\u8d39\u7528\u3002\u54ea\u4e9b\u6a21\u578b\u548c\u5bf9\u8bdd\u6700\u70e7\u94b1\uff0c\u4e00\u76ee\u4e86\u7136\u3002\u652f\u6301 burn rate \u9884\u6d4b\u548c\u7f13\u5b58\u6548\u7387\u5206\u6790\u3002' },
-      { num: '02', title: '\u5ef6\u8fdf\u8ffd\u8e2a', desc: '\u6bcf\u4e2a\u6a21\u578b\u7684 p50 \u548c p95 \u5ef6\u8fdf\u5206\u4f4d\u6570\u3002\u5de5\u5177\u6027\u80fd\u8868\u663e\u793a\u8c03\u7528\u6b21\u6570\u3001\u6210\u529f\u7387\u548c\u5e73\u5747\u54cd\u5e94\u65f6\u95f4\u3002' },
-      { num: '03', title: '\u5b89\u5168\u76d1\u63a7', desc: '\u68c0\u6d4b GenAI traces \u4e2d\u7684 shell \u547d\u4ee4\u3001\u5916\u90e8\u8bf7\u6c42\u548c\u6f5c\u5728\u7684 prompt \u6ce8\u5165\u3002\u8ffd\u8e2a OpenClaw \u7684 webhook \u9519\u8bef\u3001\u5361\u4f4f\u7684 session \u548c channel \u5065\u5eb7\u72b6\u6001\u3002' },
-      { num: '04', title: '\u5bf9\u8bdd\u56de\u653e', desc: '\u5bf9\u4e8e\u53d1\u9001\u5bf9\u8bdd\u5185\u5bb9\u7684 agent\uff08\u5982 Claude Code\uff09\uff0c\u70b9\u51fb\u67d0\u6761 trace \u5c31\u80fd\u770b\u5230\u5b8c\u6574\u5bf9\u8bdd\u2014\u2014\u6392\u67e5\u95ee\u9898\u6216\u5ba1\u8ba1 agent \u8f93\u51fa\u65f6\u5f88\u65b9\u4fbf\u3002' },
-      { num: '05', title: '\u5f02\u5e38\u68c0\u6d4b', desc: '\u6807\u8bb0 token \u5f02\u5e38\u504f\u9ad8\u3001\u9519\u8bef\u7387\u98d9\u5347\u6216\u54cd\u5e94\u53d8\u6162\u7684\u8c03\u7528\u3002\u5728\u8d39\u7528\u5806\u8d77\u6765\u4e4b\u524d\u6293\u4f4f\u5931\u63a7\u7684\u5faa\u73af\u3002' },
-      { num: '06', title: '\u5168\u6587\u641c\u7d22', desc: '\u641c\u7d22\u6240\u6709\u8bb0\u5f55\u7684\u4e8b\u4ef6\u548c traces\u3002\u6309\u6a21\u578b\u8fc7\u6ee4\u3001\u8ffd\u8e2a\u9519\u8bef\u6765\u6e90\uff0c\u6216\u6309\u5de5\u5177\u540d\u67e5\u627e\u3002' },
+      { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u54ea\u4e2a\u6a21\u578b\u6700\u8d35\uff1f\u54ea\u4e2a\u5bf9\u8bdd\u628a\u9884\u7b97\u70e7\u5149\u4e86\uff1f\u6309\u6a21\u578b\u8ffd\u8e2a token \u548c\u8d39\u7528\uff0c\u652f\u6301 burn rate \u9884\u6d4b\u548c\u7f13\u5b58\u6548\u7387\u5206\u6790\u3002' },
+      { num: '02', title: '\u5ef6\u8fdf\u8ffd\u8e2a', desc: 'Agent \u53d8\u6162\u4e86\uff0c\u662f\u6a21\u578b\u7684\u95ee\u9898\u8fd8\u662f\u5de5\u5177\u8c03\u7528\u7684\u95ee\u9898\uff1f\u6bcf\u4e2a\u6a21\u578b\u7684 p50\u3001p95 \u5ef6\u8fdf\uff0c\u52a0\u4e0a\u5de5\u5177\u6027\u80fd\u8868\u548c\u6210\u529f\u7387\u3002' },
+      { num: '03', title: '\u5b89\u5168\u76d1\u63a7', desc: '\u4f60\u7684 agent \u80fd\u8dd1 shell \u547d\u4ee4\u3001\u8bf7\u6c42\u5916\u90e8 URL\u3001\u88ab\u6ce8\u5165 prompt\u3002TMA1 \u5168\u90e8\u6807\u8bb0\u51fa\u6765\u3002\u540c\u65f6\u8ffd\u8e2a OpenClaw \u7684 webhook \u9519\u8bef\u548c\u5361\u4f4f\u7684 session\u3002' },
+      { num: '04', title: '\u5bf9\u8bdd\u56de\u653e', desc: '\u4f60\u7684 agent \u521a\u6539\u4e86 15 \u4e2a\u6587\u4ef6\u3002\u5b83\u5f53\u65f6\u5728\u60f3\u4ec0\u4e48\uff1f\u70b9\u5f00 trace \u770b\u5b8c\u6574\u5bf9\u8bdd\u2014\u2014\u6392\u67e5\u95ee\u9898\u6216\u5ba1\u8ba1 agent \u8f93\u51fa\u65f6\u5f88\u65b9\u4fbf\u3002' },
+      { num: '05', title: '\u5f02\u5e38\u68c0\u6d4b', desc: 'Agent \u5361\u5728\u91cd\u8bd5\u5faa\u73af\u91cc\u53ef\u4ee5\u70e7\u6389\u51e0\u767e\u5206\u7f8e\u5143\u3002TMA1 \u6807\u8bb0\u5f02\u5e38 token \u7528\u91cf\u3001\u9ad8\u9519\u8bef\u7387\u548c\u6162\u54cd\u5e94\uff0c\u5728\u8d39\u7528\u5806\u8d77\u6765\u4e4b\u524d\u53d1\u51fa\u8b66\u62a5\u3002' },
+      { num: '06', title: '\u5168\u6587\u641c\u7d22', desc: '\u641c\u6240\u6709\u4e1c\u897f\u3002\u6309\u6a21\u578b\u8fc7\u6ee4\u3001\u8ffd\u8e2a\u9519\u8bef\u6765\u6e90\uff0c\u6216\u6309\u5de5\u5177\u540d\u67e5\u627e\u3002' },
     ],
   },
   how: {
@@ -133,7 +135,7 @@ export const zh: T = {
   },
   security: {
     kicker: '\u5b89\u5168', title: '\u5b89\u5168\u4e0e\u9690\u79c1',
-    desc: 'Agent \u5bf9\u8bdd\u7ecf\u5e38\u6d89\u53ca\u654f\u611f\u4fe1\u606f\u3002TMA1 \u628a\u4e00\u5207\u90fd\u7559\u5728\u4f60\u7684\u673a\u5668\u4e0a\u3002',
+    desc: '\u4f60\u7684 agent \u80fd\u8bfb\u4ee3\u7801\u5e93\u3001API \u5bc6\u94a5\u3001\u57fa\u7840\u8bbe\u65bd\u914d\u7f6e\u3002\u628a\u8fd9\u4e9b\u53d1\u5230\u4e91\u7aef\u53ef\u89c2\u6d4b\u670d\u52a1\uff1f\u90a3\u8fd8\u8c08\u4ec0\u4e48\u5b89\u5168\u3002\u4e00\u5207\u7559\u5728\u672c\u5730\u3002',
     panel_title: '\u6570\u636e\u600e\u4e48\u5b58\u7684',
     panel_body: 'TMA1 \u4f1a\u628a trace \u548c\u5bf9\u8bdd\u65e5\u5fd7\u4fdd\u5b58\u5728\u672c\u5730 <code>~/.tma1/data/</code>\u3002\u6570\u636e\u4e0d\u4f1a\u4e0a\u4f20\u5230\u4efb\u4f55\u8fdc\u7a0b\u670d\u52a1\uff0c\u4f60\u53ef\u4ee5\u968f\u65f6\u67e5\u770b\u6216\u5220\u9664\u3002',
     cards: [
@@ -166,26 +168,27 @@ export const es: T = {
   description: 'Observabilidad local para tus agentes de IA. Tokens, costos, latencia y replay de conversaciones \u2014 en tu m\u00e1quina.',
   nav: { features: 'Funcionalidades', how: 'C\u00f3mo funciona', security: 'Seguridad' },
   hero: {
+    hook: 'Necesitaba saber cu\u00e1nto cuestan mis agentes \u2014 y si estaban haciendo algo peligroso.',
     h1_1: 'Sab\u00e9 qu\u00e9 hace tu agente',
     h1_2: 'y cu\u00e1nto te cuesta',
-    subtitle: 'Observabilidad local para tus agentes de IA. Cada llamada LLM \u2014 tokens, costo, latencia \u2014 registrada silenciosamente en tu m\u00e1quina.',
+    subtitle: 'Tokens, costo, latencia \u2014 cada llamada LLM, registrada <em>localmente</em>. Hac\u00e9 clic en un pico para ver qu\u00e9 conversaci\u00f3n est\u00e1 quemando plata.',
   },
   onboarding: { label: 'ONBOARDING DEL AGENTE', manual: 'Instalaci\u00f3n manual' },
   highlights: [
-    { title: 'Inspeccion\u00e1 cada llamada', desc: 'Hac\u00e9 clic en cualquier llamada LLM para ver tokens, costo, latencia y \u2014 si el agente lo soporta \u2014 el prompt y la respuesta completos.' },
-    { title: 'Rastre\u00e1 los costos', desc: 'Uso de tokens y costo por modelo, a lo largo del tiempo. Encontr\u00e1 r\u00e1pido las llamadas m\u00e1s caras.' },
-    { title: 'Todo en tu m\u00e1quina', desc: 'Todos los datos en <code>~/.tma1/</code>. Sin cuentas en la nube, sin servicios externos.' },
+    { title: 'Mir\u00e1 qu\u00e9 pas\u00f3', desc: 'Un agente corri\u00f3 20 minutos. \u00bfQu\u00e9 hizo? Abr\u00ed el dashboard, hac\u00e9 clic en un trace, le\u00e9 la conversaci\u00f3n completa.' },
+    { title: 'Detect\u00e1 las llamadas caras', desc: 'Esa sesi\u00f3n de $40 del martes pasado \u2014 \u00bffue un context window enorme o un loop de reintentos? Ahora lo sab\u00e9s.' },
+    { title: 'Nada sale de tu m\u00e1quina', desc: 'Tu agente ve tu c\u00f3digo, tus variables de entorno, tus claves. Esos datos se quedan en <code>~/.tma1/</code>, nunca se suben a ninguna parte.' },
   ],
   features: {
     kicker: 'Funcionalidades', title: 'Observabilidad sin complicaciones',
-    desc: 'Costos, latencia, seguridad y errores \u2014 en un dashboard local.',
+    desc: 'Un dashboard para todo lo que hacen tus agentes. Sin Grafana, sin nube, sin YAML.',
     cards: [
-      { num: '01', title: 'Desglose de costos', desc: 'Tokens y costo estimado por modelo, rastreados a lo largo del tiempo. De un vistazo, qu\u00e9 modelos y conversaciones cuestan m\u00e1s. Con proyecciones de burn rate y an\u00e1lisis de eficiencia de cach\u00e9.' },
-      { num: '02', title: 'Seguimiento de latencia', desc: 'Percentiles p50 y p95 de latencia por modelo. Tablas de rendimiento de herramientas con conteo de llamadas, tasa de \u00e9xito y tiempos de respuesta.' },
-      { num: '03', title: 'Monitoreo de seguridad', desc: 'Detecta comandos shell, peticiones externas e inyecciones de prompt potenciales en traces GenAI. Rastrea errores de webhook, sesiones atascadas y salud de canales en OpenClaw.' },
-      { num: '04', title: 'Replay de conversaciones', desc: 'Para agentes que emiten contenido de conversaci\u00f3n (como Claude Code), hac\u00e9 clic en un trace para leer el di\u00e1logo \u2014 \u00fatil para depurar o auditar lo que dijo tu agente.' },
-      { num: '05', title: 'Detecci\u00f3n de anomal\u00edas', desc: 'Marca llamadas con tokens inusualmente altos, errores elevados o respuestas lentas. Detect\u00e1 bucles descontrolados antes de que acumulen costos.' },
-      { num: '06', title: 'B\u00fasqueda de texto completo', desc: 'Busc\u00e1 en todos los eventos y traces. Filtr\u00e1 por modelo, rastre\u00e1 un error hasta la llamada original, o busc\u00e1 por nombre de herramienta.' },
+      { num: '01', title: 'Desglose de costos', desc: '\u00bfQu\u00e9 modelo cuesta m\u00e1s? \u00bfQu\u00e9 conversaci\u00f3n quem\u00f3 tu presupuesto? Tokens y costo estimado por modelo, con proyecciones de burn rate y an\u00e1lisis de eficiencia de cach\u00e9.' },
+      { num: '02', title: 'Seguimiento de latencia', desc: 'Cuando tu agente se siente lento, \u00bfes el modelo o las herramientas? Percentiles p50 y p95 por modelo, m\u00e1s tablas de rendimiento de herramientas con conteos y tasas de \u00e9xito.' },
+      { num: '03', title: 'Monitoreo de seguridad', desc: 'Tu agente puede ejecutar comandos shell, hacer fetches a URLs externas y recibir prompts inyectados. TMA1 marca todo. Adem\u00e1s rastrea errores de webhook y sesiones atascadas en OpenClaw.' },
+      { num: '04', title: 'Replay de conversaciones', desc: 'Tu agente acaba de editar 15 archivos. \u00bfQu\u00e9 estaba pensando? Hac\u00e9 clic en un trace para leer el di\u00e1logo completo \u2014 \u00fatil para depurar o auditar.' },
+      { num: '05', title: 'Detecci\u00f3n de anomal\u00edas', desc: 'Un agente atascado en un loop de reintentos puede quemar cientos de d\u00f3lares. TMA1 marca tokens inusuales, errores altos y respuestas lentas antes de que los costos se acumulen.' },
+      { num: '06', title: 'B\u00fasqueda de texto completo', desc: 'Busc\u00e1 todo. Filtr\u00e1 por modelo, rastre\u00e1 un error hasta la llamada original, o busc\u00e1 por nombre de herramienta.' },
     ],
   },
   how: {
@@ -199,7 +202,7 @@ export const es: T = {
   },
   security: {
     kicker: 'Seguridad', title: 'Seguridad y privacidad',
-    desc: 'Las conversaciones de agentes suelen tener contexto sensible. TMA1 mantiene todo en tu m\u00e1quina.',
+    desc: 'Tu agente lee tu c\u00f3digo, tus API keys, tu infraestructura. Mandar eso a un servicio de observabilidad en la nube anula el prop\u00f3sito. Todo se queda local.',
     panel_title: 'C\u00f3mo se almacenan los datos',
     panel_body: 'TMA1 guarda traces y logs de conversaci\u00f3n en tu disco local, en <code>~/.tma1/data/</code>. No se sube nada a servicios remotos y pod\u00e9s inspeccionar o borrar los datos cuando quieras.',
     cards: [

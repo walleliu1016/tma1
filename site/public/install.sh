@@ -237,6 +237,9 @@ post_install() {
   info "Installed tma1-server to ${INSTALL_DIR}/tma1-server"
   echo ""
 
+  local data_dir="${TMA1_DATA_DIR:-$HOME/.tma1}"
+  local greptime_config_path="${data_dir}/config/standalone.toml"
+
   # Check if already in PATH
   if ! command -v tma1-server >/dev/null 2>&1; then
     echo "Add TMA1 to your PATH:"
@@ -271,6 +274,9 @@ post_install() {
   echo '  protocol = "binary"'
   echo ""
   echo "Dashboard: http://localhost:${TMA1_PORT}"
+  echo "GreptimeDB config: ${greptime_config_path}"
+  echo "  Generated automatically on first start and reused on later restarts."
+  echo "  Edit it if you want to tune GreptimeDB CPU or memory limits."
   echo ""
 }
 
