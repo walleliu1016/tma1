@@ -72,12 +72,6 @@ Use this skill when the user wants to understand what their AI agent has been do
 
 ---
 
-## When NOT to use this skill
-
-- The user wants persistent memory across sessions → use mem9 instead
-
----
-
 ## What you get
 
 TMA1 captures different data depending on the agent:
@@ -554,21 +548,6 @@ ORDER BY input_tok DESC
 | No data in dashboard | Verify agent OTel config points to TMA1 (Claude Code/OpenClaw: `/v1/otlp`; Codex: separate `/v1/logs`, `/v1/traces`, `/v1/metrics`) and restart the agent |
 | Port conflict on 14000 | Set `TMA1_GREPTIMEDB_HTTP_PORT=14001` and update agent endpoint config |
 | Dashboard shows "GREPTIMEDB: unreachable" | Database crashed; restart with `tma1-server` |
-
----
-
-## Coexistence with mem9
-
-TMA1 and mem9 serve different purposes and work fine together:
-
-| | mem9 | TMA1 |
-| --- | --- | --- |
-| **Purpose** | Persistent cross-session memory | Agent activity observability |
-| **Data** | What the agent remembers | What the agent did |
-| **Storage** | Cloud (or self-hosted) | Local only |
-| **Query** | Memory search API | SQL |
-
-Install both: mem9 for memory, TMA1 for observability.
 
 ---
 

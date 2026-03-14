@@ -213,7 +213,7 @@ shellcheck site/public/install.sh
 
 ## Explicitly absent (by design)
 
-- No memory / RAG features (separate concern, e.g. mem9)
+- No memory / RAG features (separate concern)
 - No OTel Collector (direct OTLP to GreptimeDB)
 - No authentication (local-only tool)
 - No multi-tenant support
