@@ -2,6 +2,9 @@
 # TMA1 installer — downloads the latest tma1-server binary and registers it as a service.
 # Usage: curl -fsSL https://tma1.ai/install.sh | bash
 #
+# Force reinstall (wipes all data):
+#   curl -fsSL https://tma1.ai/install.sh | TMA1_FORCE=1 bash
+#
 # Uninstall:
 #   macOS:  launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.tma1.server.plist && rm ~/Library/LaunchAgents/ai.tma1.server.plist
 #   Linux:  systemctl --user disable --now tma1-server && rm ~/.config/systemd/user/tma1-server.service
@@ -11,6 +14,7 @@ set -euo pipefail
 REPO="tma1-ai/tma1"
 INSTALL_DIR="${TMA1_INSTALL_DIR:-$HOME/.tma1/bin}"
 TMA1_PORT="${TMA1_PORT:-14318}"
+TMA1_FORCE="${TMA1_FORCE:-0}"
 
 info()  { printf "\033[1;34m==>\033[0m %s\n" "$1"; }
 warn()  { printf "\033[1;33mWarning:\033[0m %s\n" "$1"; }
@@ -280,12 +284,23 @@ post_install() {
   echo ""
 }
 
+# --- Force reinstall: wipe existing data ---
+force_clean() {
+  if [ "$TMA1_FORCE" != "1" ]; then
+    return
+  fi
+  local data_dir="${TMA1_DATA_DIR:-$HOME/.tma1}"
+  warn "TMA1_FORCE=1: removing ${data_dir} (all data, config, and logs will be deleted)"
+  rm -rf "$data_dir"
+}
+
 # --- Main ---
 main() {
   info "Installing TMA1..."
   detect_platform
   resolve_version
   stop_service
+  force_clean
   download
   setup_service
   post_install

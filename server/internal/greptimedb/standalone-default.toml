@@ -65,5 +65,10 @@ scan_memory_limit = "256MB"
 [region_engine.metric]
 sparse_primary_key_encoding = true
 
+[logging]
+level = "warn"
+append_stdout = false
+max_log_files = 168
+
 [memory]
 enable_heap_profiling = false

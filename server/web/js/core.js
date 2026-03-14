@@ -118,7 +118,7 @@ async function loadPricing() {
       pricingLoaded = true;
     }
   } catch (e) {
-    // Table may not exist yet; costCaseSQL will use default-only CASE.
+    // Table may not exist yet; costCaseSQL will fall back to default pricing.
   }
 }
 
@@ -128,6 +128,12 @@ function costCaseSQL(modelExpr, inputExpr, outputExpr) {
       "CAST(" + inputExpr + " AS DOUBLE)*" + m.i + "/1000000.0+" +
       "CAST(" + outputExpr + " AS DOUBLE)*" + m.o + "/1000000.0";
   });
+  if (!parts.length) {
+    return "(" +
+      "CAST(" + inputExpr + " AS DOUBLE)*" + defaultPrice.i + "/1000000.0+" +
+      "CAST(" + outputExpr + " AS DOUBLE)*" + defaultPrice.o + "/1000000.0" +
+      ")";
+  }
   return "(CASE " + parts.join(" ") +
     " ELSE CAST(" + inputExpr + " AS DOUBLE)*" + defaultPrice.i + "/1000000.0+" +
     "CAST(" + outputExpr + " AS DOUBLE)*" + defaultPrice.o + "/1000000.0 END)";

@@ -126,6 +126,10 @@ func main() {
 // when GenAI trace data is present (flows depend on gen_ai.* columns).
 func initFlowsWithRetry(httpPort int, logger *slog.Logger) {
 	for i := 0; i < 10; i++ {
+		// Re-attempt pricing seed in case it failed at startup.
+		if err := greptimedb.SeedPricing(httpPort, logger); err != nil {
+			logger.Warn("seed pricing retry warning", "err", err)
+		}
 		if greptimedb.FlowsReady(httpPort) {
 			logger.Info("all flows already exist, skipping init")
 			return
