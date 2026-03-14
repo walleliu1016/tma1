@@ -83,8 +83,9 @@ header .tagline { font-size: 13px; color: var(--text-muted); }
 }
 .status-dot.offline { background: var(--red); }
 .data-freshness {
-  font-size: 11px; color: var(--text-muted); white-space: nowrap;
+  font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-left: 12px;
 }
+.data-freshness:empty { margin-left: 0; }
 .data-freshness.stale { color: var(--yellow); }
 .data-freshness.very-stale { color: var(--red); }
 

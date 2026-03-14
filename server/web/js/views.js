@@ -336,7 +336,7 @@ async function checkDataFreshness() {
       var ts1 = ccResults[0] && rows(ccResults[0])?.[0]?.[0];
       var ts2 = ccResults[1] && rows(ccResults[1])?.[0]?.[0];
       var lastTs = null;
-      if (ts1 && ts2) lastTs = new Date(ts1) > new Date(ts2) ? ts1 : ts2;
+      if (ts1 && ts2) lastTs = parseTimestamp(ts1) > parseTimestamp(ts2) ? ts1 : ts2;
       else lastTs = ts1 || ts2;
       renderFreshness(el, lastTs);
     } catch { el.textContent = ''; el.className = 'data-freshness'; }
@@ -345,15 +345,13 @@ async function checkDataFreshness() {
     try {
       var codexResults = await Promise.all([
         query("SELECT MAX(timestamp) AS last_ts FROM opentelemetry_logs WHERE scope_name LIKE 'codex_%'").catch(function() { return null; }),
-        query("SELECT MAX(timestamp) AS last_ts FROM opentelemetry_traces WHERE service_name = 'codex_cli_rs'").catch(function() { return null; }),
-        query("SELECT MAX(greptime_timestamp) AS last_ts FROM codex_websocket_request_total").catch(function() { return null; }),
+        query("SELECT MAX(greptime_timestamp) AS last_ts FROM codex_tokens_total").catch(function() { return null; }),
       ]);
       var cTs1 = codexResults[0] && rows(codexResults[0])?.[0]?.[0];
       var cTs2 = codexResults[1] && rows(codexResults[1])?.[0]?.[0];
-      var cTs3 = codexResults[2] && rows(codexResults[2])?.[0]?.[0];
-      var cLastTs = [cTs1, cTs2, cTs3].filter(Boolean).reduce(function(latest, ts) {
+      var cLastTs = [cTs1, cTs2].filter(Boolean).reduce(function(latest, ts) {
         if (!latest) return ts;
-        return new Date(ts).getTime() > new Date(latest).getTime() ? ts : latest;
+        return parseTimestamp(ts) > parseTimestamp(latest) ? ts : latest;
       }, null);
       renderFreshness(el, cLastTs);
     } catch { el.textContent = ''; el.className = 'data-freshness'; }
@@ -378,19 +376,37 @@ async function checkDataFreshness() {
   }
 }
 
+function parseTimestamp(val) {
+  if (!val) return NaN;
+  if (typeof val === 'number') {
+    if (val > 1e15) return val / 1e6;
+    if (val > 1e12) return val / 1e3;
+    return val;
+  }
+  var s = String(val).replace(' ', 'T');
+  s = s.replace(/(\.\d{3})\d+/, '$1');
+  s = s.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+  if (!/[Z+-]/.test(s.slice(-6))) s += 'Z';
+  return new Date(s).getTime();
+}
+
 function renderFreshness(el, lastTs) {
   if (!lastTs) {
     el.textContent = t('freshness.no_data');
     el.className = 'data-freshness very-stale';
     return;
   }
-  var diffMs = Date.now() - new Date(lastTs).getTime();
+  var diffMs = Date.now() - parseTimestamp(lastTs);
+  if (isNaN(diffMs) || diffMs < 0) {
+    el.textContent = t('freshness.no_data');
+    el.className = 'data-freshness very-stale';
+    return;
+  }
   var diffSec = Math.floor(diffMs / 1000);
   var label;
   if (diffSec < 60) label = diffSec + 's ago';
   else if (diffSec < 3600) label = Math.floor(diffSec / 60) + 'm ago';
-  else if (diffSec < 86400) label = Math.floor(diffSec / 3600) + 'h ago';
-  else label = Math.floor(diffSec / 86400) + 'd ago';
+  else label = Math.floor(diffSec / 3600) + 'h ago';
 
   el.textContent = t('freshness.last_data') + label;
   el.className = 'data-freshness';
