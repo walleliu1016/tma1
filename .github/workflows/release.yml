@@ -44,7 +44,11 @@ jobs:
         run: |
           ARCHIVE="tma1-server-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
           tar -czf "${ARCHIVE}" -C server/bin tma1-server
-          shasum -a 256 "${ARCHIVE}" > "${ARCHIVE}.sha256sum"
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${ARCHIVE}" > "${ARCHIVE}.sha256sum"
+          else
+            shasum -a 256 "${ARCHIVE}" > "${ARCHIVE}.sha256sum"
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -69,3 +73,4 @@ jobs:
             tma1-server-*.tar.gz
             tma1-server-*.sha256sum
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
