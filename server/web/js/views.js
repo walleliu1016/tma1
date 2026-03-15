@@ -308,7 +308,7 @@ function onAutoRefreshChange() {
   autoRefreshTimer = setInterval(function() {
     if (refreshInFlight) return;
     refreshInFlight = true;
-    Promise.resolve(refreshCurrentView()).finally(function() { refreshInFlight = false; });
+    refreshCurrentView().finally(function() { refreshInFlight = false; });
   }, seconds * 1000);
 }
 
