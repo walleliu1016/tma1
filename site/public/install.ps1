@@ -39,7 +39,7 @@ function Resolve-Version {
     }
 
     # Fallback: GitHub API
-    $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=1" -UseBasicParsing
+    $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=1"
     if ($releases -and $releases[0].tag_name) { return $releases[0].tag_name }
 
     throw 'Failed to resolve latest version. Set $env:TMA1_VERSION to install a specific version.'
@@ -135,7 +135,12 @@ function Register-TMA1Task {
     # matching what the Unix installer does with launchd/systemd.
     $cmdArgs = "/c `"set `"TMA1_PORT=$TMA1Port`" && set `"TMA1_DATA_DIR=$TMA1DataDir`" && `"$binPath`"`""
     $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Arguments $cmdArgs
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    # Scope to current user only, matching Unix installer's per-user service registration.
+    # Use fully qualified DOMAIN\User identity so it works on domain-joined machines
+    # and with Microsoft accounts (bare $env:USERNAME is ambiguous).
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
+    $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
@@ -144,7 +149,7 @@ function Register-TMA1Task {
         -ExecutionTimeLimit (New-TimeSpan -Days 9999)
 
     Register-ScheduledTask -TaskName 'TMA1 Server' `
-        -Action $action -Trigger $trigger -Settings $settings `
+        -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
         -Description 'TMA1 Server - LLM Agent Observability' `
         -Force | Out-Null
 
