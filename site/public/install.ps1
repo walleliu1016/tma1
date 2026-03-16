@@ -99,7 +99,7 @@ function Install-TMA1 {
         try {
             $checksumFile = Join-Path $tmpDir 'checksum.txt'
             Invoke-WebRequest -Uri $checksumUrl -OutFile $checksumFile -UseBasicParsing
-            $checksumLine = Get-Content $checksumFile | Where-Object { $_ -match $archive } | Select-Object -First 1
+            $checksumLine = Get-Content $checksumFile | Where-Object { $_ -like "*$archive*" } | Select-Object -First 1
             if ($checksumLine) {
                 $expectedHash = ($checksumLine -split '\s+')[0]
                 $actualHash = (Get-FileHash -Path $archivePath -Algorithm SHA256).Hash.ToLower()
@@ -148,7 +148,7 @@ function Register-TMA1Task {
         -DontStopIfGoingOnBatteries `
         -RestartCount 3 `
         -RestartInterval (New-TimeSpan -Minutes 1) `
-        -ExecutionTimeLimit (New-TimeSpan -Days 9999)
+        -ExecutionTimeLimit ([TimeSpan]::Zero)
 
     Register-ScheduledTask -TaskName 'TMA1 Server' `
         -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
