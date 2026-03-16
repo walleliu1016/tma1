@@ -275,7 +275,8 @@ document.querySelectorAll('#cc-tabs .tab').forEach(function(btn) {
 
 function cc_onTabChange(tab) {
   if (tab === 'cc-overview') cc_loadOverview();
-  else if (tab === 'cc-events') cc_loadEvents();
+  else if (tab === 'cc-sessions') cc_loadSessions();
+  else if (tab === 'cc-tools') cc_loadToolsTab();
   else if (tab === 'cc-cost') cc_loadCostTab();
   else if (tab === 'cc-search') cc_loadAnomalies();
 }

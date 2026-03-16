@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # TMA1 installer — downloads the latest tma1-server binary and registers it as a service.
-# Usage: curl -fsSL https://tma1.ai/install.sh | bash
+#
+# Install or upgrade:
+#   curl -fsSL https://tma1.ai/install.sh | bash
+#
+# Pin a specific version:
+#   curl -fsSL https://tma1.ai/install.sh | TMA1_VERSION=v0.1.0 bash
 #
 # Force reinstall (wipes all data):
 #   curl -fsSL https://tma1.ai/install.sh | TMA1_FORCE=1 bash

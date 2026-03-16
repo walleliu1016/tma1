@@ -14,8 +14,9 @@ const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | bash';
 // padded: true → narrow crop, centered vertically with dashboard bg fill
 const showcase = [
   { dark: '/screenshots/cost-dark.webp', light: '/screenshots/cost-light.webp', w: 2926, h: 1698 },
-  { dark: '/screenshots/tools-dark.webp', light: '/screenshots/tools-light.webp', w: 2926, h: 1698 },
-  { dark: '/screenshots/security-dark.webp', light: '/screenshots/security-light.webp', w: 2938, h: 664, padded: true },
+  { dark: '/screenshots/sessions-dark.webp', light: '/screenshots/sessions-light.webp', w: 3010, h: 1706 },
+  { dark: '/screenshots/tools-dark.webp', light: '/screenshots/tools-light.webp', w: 3010, h: 1706 },
+  { dark: '/screenshots/security-dark.webp', light: '/screenshots/security-light.webp', w: 3010, h: 1154 },
   { dark: '/screenshots/traces-dark.webp', light: '/screenshots/traces-light.webp', w: 2938, h: 1714 },
   { dark: '/screenshots/anomaly-dark.webp', light: '/screenshots/anomaly-light.webp', w: 2926, h: 1564 },
 ];
@@ -109,7 +110,7 @@ const showcase = [
         data-light-src="/screenshots/hero-light.webp"
         src="/screenshots/hero-dark.webp"
         alt="TMA1 Dashboard — Claude Code Overview"
-        loading="eager" width="2926" height="1698" />
+        loading="eager" width="3010" height="1706" />
     </div>
 
     <div class="highlights">
@@ -127,7 +128,7 @@ const showcase = [
     <h2 class="section-title">{t.features.title}</h2>
     <p class="section-desc">{t.features.desc}</p>
     <div class="showcase">
-      {t.features.cards.slice(0, 5).map((c, i) => (
+      {t.features.cards.slice(0, 6).map((c, i) => (
         <div class={`showcase-row${i % 2 === 1 ? ' flip' : ''}`}>
           <div class="showcase-text">
             <div class="feature-icon">{c.num}</div>
@@ -155,11 +156,11 @@ const showcase = [
         </div>
       ))}
     </div>
-    {t.features.cards[5] && (
+    {t.features.cards[6] && (
       <div class="feature-standalone">
-        <div class="feature-icon">{t.features.cards[5].num}</div>
-        <h3>{t.features.cards[5].title}</h3>
-        <p set:html={t.features.cards[5].desc} />
+        <div class="feature-icon">{t.features.cards[6].num}</div>
+        <h3>{t.features.cards[6].title}</h3>
+        <p set:html={t.features.cards[6].desc} />
       </div>
     )}
   </section>

@@ -6,6 +6,28 @@ var ccEventsPageSize = 15;
 var ccEventsHasNext = false;
 var ccPendingEventFocus = null;
 
+var ccSessionsPage = 0;
+var ccSessionsPageSize = 15;
+var ccSessionsHasNext = false;
+var ccSessionsData = [];
+
+var CC_TOOL_CATEGORIES = {
+  'Read': 'file_read', 'View': 'file_read',
+  'Glob': 'file_read', 'Grep': 'file_read',
+  'Write': 'file_write', 'Edit': 'file_write', 'MultiEdit': 'file_write',
+  'Bash': 'shell',
+  'WebFetch': 'web', 'WebSearch': 'web',
+  'Task': 'agent',
+};
+function ccToolCategory(name) {
+  return CC_TOOL_CATEGORIES[name] || 'other';
+}
+
+var CC_CATEGORY_ICONS = {
+  'file_read': '\u{1F4C4}', 'file_write': '\u270F\uFE0F',
+  'shell': '\u{1F4BB}', 'web': '\u{1F310}', 'agent': '\u{1F916}', 'other': '\u{1F527}',
+};
+
 function cc_resetEventsPaging() {
   ccEventsPage = 0;
 }
@@ -68,47 +90,68 @@ function cc_focusPendingEvent() {
 }
 
 async function cc_switchToEvent(tsEnc, sidEnc, seq) {
-  var targetTs = tsEnc || '';
   var targetSid = sidEnc || '';
-  var targetSeq = seq == null ? null : Number(seq);
-  if (Number.isNaN(targetSeq)) targetSeq = null;
-  if (!targetTs) return;
+  var targetTs = tsEnc ? decodeURIComponent(tsEnc) : '';
+  if (!targetTs && !targetSid) return;
 
+  // Switch to Sessions tab
   document.querySelectorAll('#cc-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('#view-claude-code .tab-content').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelector('[data-cctab="cc-events"]').classList.add('active');
-  document.getElementById('tab-cc-events').classList.add('active');
+  document.querySelector('[data-cctab="cc-sessions"]').classList.add('active');
+  document.getElementById('tab-cc-sessions').classList.add('active');
 
-  var filter = document.getElementById('cc-event-filter');
-  if (filter) filter.value = 'claude_code.api_request';
-  cc_resetEventsPaging();
+  // Set filter to session ID if available
+  var filterInput = document.getElementById('cc-session-filter');
+  if (filterInput) filterInput.value = targetSid || '';
+  ccSessionsPage = 0;
+  await cc_loadSessions();
+  if (typeof updateHash === 'function') updateHash();
 
-  try {
-    var iv = intervalSQL();
-    if (!/^\d+$/.test(targetTs)) throw new Error('invalid ts');
-    var where =
-      "FROM opentelemetry_logs " +
-      "WHERE body = 'claude_code.api_request' " +
-      "  AND timestamp > NOW() - INTERVAL '" + iv + "' " +
-      "  AND timestamp > " + targetTs + "::TIMESTAMP_NS";
-
-    var rankRes = await query("SELECT COUNT(*) AS newer " + where);
-    var newer = Number(rows(rankRes)?.[0]?.[0]) || 0;
-    ccEventsPage = Math.floor(newer / ccEventsPageSize);
-  } catch {
-    ccEventsPage = 0;
+  // Find the session containing the target timestamp and expand it
+  if (!ccSessionsData.length) return;
+  var targetMs = targetTs ? tsToMs(targetTs) : 0;
+  var matchIdx = -1;
+  if (targetSid) {
+    for (var i = 0; i < ccSessionsData.length; i++) {
+      if (ccSessionsData[i].sessionId === targetSid) { matchIdx = i; break; }
+    }
   }
+  if (matchIdx < 0 && targetMs) {
+    for (var j = 0; j < ccSessionsData.length; j++) {
+      var g = ccSessionsData[j];
+      if (targetMs >= tsToMs(g.firstTs) && targetMs <= tsToMs(g.lastTs)) { matchIdx = j; break; }
+    }
+  }
+  if (matchIdx < 0) return; // target not found in loaded data; don't expand an unrelated session
 
-  ccPendingEventFocus = {
-    timestamp: targetTs,
-    sessionId: targetSid || '',
-    seq: targetSeq,
-  };
-  await cc_loadEvents(false);
-  if (ccPendingEventFocus) {
-    ccEventsPage = 0;
-    await cc_loadEvents(false);
-    ccPendingEventFocus = null;
+  // Navigate to the correct page and expand
+  var page = Math.floor(matchIdx / ccSessionsPageSize);
+  if (page !== ccSessionsPage) { ccSessionsPage = page; cc_renderSessions(); }
+  var row = document.querySelector('#cc-sessions-body tr:nth-child(' + (matchIdx - page * ccSessionsPageSize + 1) + ')');
+  if (row) {
+    cc_toggleSessionDetail(matchIdx, row);
+    // Highlight the matching event within the expanded detail
+    if (targetMs) {
+      setTimeout(function() {
+        var detail = document.querySelector('.cc-session-detail-row');
+        if (!detail) return;
+        var divs = detail.querySelectorAll('.clickable');
+        var best = null, bestDiff = Infinity;
+        divs.forEach(function(div) {
+          var spans = div.querySelectorAll('span');
+          for (var s = 0; s < spans.length; s++) {
+            var ts = Date.parse(spans[s].textContent);
+            if (!isNaN(ts)) { var diff = Math.abs(ts - targetMs); if (diff < bestDiff) { bestDiff = diff; best = div; } break; }
+          }
+        });
+        if (best) {
+          best.style.background = 'var(--bg-secondary)';
+          best.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    } else {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 }
 
@@ -148,8 +191,6 @@ async function cc_loadOverview() {
     cc_loadCostChart(),
     cc_loadLatencyChart(),
     cc_loadErrorChart(),
-    cc_loadToolDistribution(),
-    cc_loadToolPerformance(),
     cc_loadActivityHeatmap(),
     cc_loadMetricsExplorer(),
   ]);
@@ -499,7 +540,7 @@ async function cc_loadPromptTraces() {
       "FROM opentelemetry_logs " +
       "WHERE body IN ('claude_code.user_prompt', 'claude_code.api_request', 'claude_code.api_error', 'claude_code.tool_result', 'claude_code.tool_decision') " +
       "  AND timestamp > NOW() - INTERVAL '" + iv + "' " +
-      "ORDER BY timestamp DESC LIMIT 2000"
+      "ORDER BY timestamp DESC LIMIT " + sessionQueryLimit()
     );
     var data = rowsToObjects(res);
     if (!data.length) {
@@ -940,4 +981,437 @@ function cc_toggleAnomalyDetail(item, idx) {
   try { formatted = JSON.stringify(JSON.parse(attrs), null, 2); } catch(e) {}
   detail.innerHTML = '<pre style="font-size:12px;color:var(--text-muted);margin-top:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-all">' + escapeHTML(formatted) + '</pre>';
   detail.style.display = 'block';
+}
+
+// ===================================================================
+// Claude Code view — Sessions tab
+// ===================================================================
+function cc_prevSessionsPage() {
+  if (ccSessionsPage <= 0) return;
+  ccSessionsPage--;
+  cc_renderSessions();
+}
+
+function cc_nextSessionsPage() {
+  if (!ccSessionsHasNext) return;
+  ccSessionsPage++;
+  cc_renderSessions();
+}
+
+function cc_updateSessionsPager(shownCount) {
+  var prevBtn = document.getElementById('cc-sessions-prev-btn');
+  var nextBtn = document.getElementById('cc-sessions-next-btn');
+  var info = document.getElementById('cc-sessions-page-info');
+  if (!prevBtn || !nextBtn || !info) return;
+
+  var total = ccSessionsData.length;
+  ccSessionsHasNext = (ccSessionsPage + 1) * ccSessionsPageSize < total;
+  prevBtn.disabled = ccSessionsPage <= 0;
+  nextBtn.disabled = !ccSessionsHasNext;
+  if (!shownCount) {
+    info.textContent = 'No results';
+    return;
+  }
+  var start = ccSessionsPage * ccSessionsPageSize + 1;
+  var end = start + shownCount - 1;
+  info.textContent = 'Page ' + (ccSessionsPage + 1) + ' \u00b7 ' + start + '-' + end + ' of ' + total;
+}
+
+async function cc_loadSessions() {
+  var tbody = document.getElementById('cc-sessions-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">' + t('empty.loading') + '</td></tr>';
+
+  try {
+    var iv = intervalSQL();
+    var filterText = (document.getElementById('cc-session-filter')?.value || '').trim();
+    var rowLimit = sessionQueryLimit();
+    var res = await query(
+      "SELECT timestamp, body, log_attributes " +
+      "FROM opentelemetry_logs " +
+      "WHERE body IN ('claude_code.user_prompt', 'claude_code.api_request', 'claude_code.api_error', 'claude_code.tool_result', 'claude_code.tool_decision') " +
+      "  AND timestamp > NOW() - INTERVAL '" + iv + "' " +
+      "ORDER BY timestamp DESC LIMIT " + rowLimit
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="loading">' + t('empty.no_events') + '</td></tr>';
+      cc_updateSessionsPager(0);
+      return;
+    }
+
+    // Parse events
+    var events = [];
+    var hasPromptId = false;
+    var hasSessionId = false;
+    data.forEach(function(d) {
+      var attrs = cc_parseAttrs(d.log_attributes);
+      var promptId = cc_attr(attrs, 'prompt.id');
+      var sessionId = cc_attr(attrs, 'session.id');
+      var seqRaw = cc_attr(attrs, 'event.sequence');
+      var seq = seqRaw == null ? null : Number(seqRaw);
+      if (seq != null && Number.isNaN(seq)) seq = null;
+      if (promptId) hasPromptId = true;
+      if (sessionId) hasSessionId = true;
+      events.push({
+        timestamp: d.timestamp,
+        body: d.body,
+        seq: seq,
+        promptId: promptId ? String(promptId) : null,
+        sessionId: sessionId ? String(sessionId) : null,
+        model: cc_attr(attrs, 'model'),
+        tool: cc_attr(attrs, 'tool_name'),
+        cost: Number(cc_attr(attrs, 'cost_usd')) || 0,
+        duration: cc_attr(attrs, 'duration_ms'),
+        error: cc_attr(attrs, 'error'),
+        success: cc_attr(attrs, 'success'),
+        inputTokens: Number(cc_attr(attrs, 'input_tokens')) || 0,
+        outputTokens: Number(cc_attr(attrs, 'output_tokens')) || 0,
+        cacheRead: Number(cc_attr(attrs, 'cache_read_tokens')) || 0,
+        cacheCreate: Number(cc_attr(attrs, 'cache_creation_tokens')) || 0,
+        attrs: attrs,
+      });
+    });
+
+    // Build session groups
+    var groups = [];
+    if (hasSessionId) {
+      var bySession = {};
+      events.forEach(function(e) {
+        if (!e.sessionId) return;
+        if (!bySession[e.sessionId]) bySession[e.sessionId] = [];
+        bySession[e.sessionId].push(e);
+      });
+      Object.keys(bySession).forEach(function(sessionId) {
+        var arr = bySession[sessionId];
+        var turns = 0;
+        var tools = 0;
+        var tokens = 0;
+        var cost = 0;
+        var errors = 0;
+        var firstTs = arr[arr.length - 1].timestamp;
+        var lastTs = arr[0].timestamp;
+        arr.forEach(function(e) {
+          if (e.body === 'claude_code.user_prompt') turns++;
+          if (e.body === 'claude_code.tool_result') tools++;
+          if (e.body === 'claude_code.api_request') {
+            tokens += e.inputTokens + e.outputTokens + e.cacheRead + e.cacheCreate;
+            cost += e.cost;
+          }
+          if (e.body === 'claude_code.api_error' || e.error) errors++;
+        });
+        groups.push({
+          sessionId: sessionId,
+          firstTs: firstTs,
+          lastTs: lastTs,
+          turns: turns,
+          tools: tools,
+          tokens: tokens,
+          cost: cost,
+          errors: errors,
+          events: arr,
+        });
+      });
+    } else if (hasPromptId) {
+      var byPrompt = {};
+      events.forEach(function(e) {
+        if (!e.promptId) return;
+        if (!byPrompt[e.promptId]) byPrompt[e.promptId] = cc_newTraceGroup(e.promptId, e.sessionId, e.timestamp);
+        cc_addEventToTraceGroup(byPrompt[e.promptId], e);
+      });
+      Object.values(byPrompt).forEach(function(g) {
+        var tokens = 0;
+        g.events.forEach(function(e) {
+          if (e.body === 'claude_code.api_request') {
+            tokens += (e.inputTokens || 0) + (e.outputTokens || 0) + (e.cacheRead || 0) + (e.cacheCreate || 0);
+          }
+        });
+        groups.push({
+          sessionId: g.promptId,
+          firstTs: g.events[g.events.length - 1]?.timestamp || g.latestTs,
+          lastTs: g.latestTs,
+          turns: g.events.filter(function(e) { return e.body === 'claude_code.user_prompt'; }).length || g.reqs,
+          tools: g.tools,
+          tokens: tokens,
+          cost: g.cost,
+          errors: g.errors,
+          events: g.events,
+        });
+      });
+    }
+
+    // Apply filter
+    groups = groups.filter(function(g) {
+      if (!filterText) return true;
+      return g.sessionId.indexOf(filterText) >= 0;
+    });
+
+    // Sort by latest timestamp descending
+    groups.sort(function(a, b) { return tsToMs(b.lastTs) - tsToMs(a.lastTs); });
+    ccSessionsData = groups;
+    ccSessionsPage = 0;
+    cc_renderSessions();
+
+    // Show truncation warning if the query hit its row limit
+    var warnEl = document.getElementById('cc-sessions-truncation');
+    if (warnEl) warnEl.style.display = data.length >= rowLimit ? 'block' : 'none';
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Error: ' + escapeHTML(err.message) + '</td></tr>';
+    cc_updateSessionsPager(0);
+  }
+}
+
+function cc_renderSessions() {
+  var tbody = document.getElementById('cc-sessions-body');
+  if (!tbody) return;
+  var start = ccSessionsPage * ccSessionsPageSize;
+  var page = ccSessionsData.slice(start, start + ccSessionsPageSize);
+
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">' + t('empty.no_events') + '</td></tr>';
+    cc_updateSessionsPager(0);
+    return;
+  }
+
+  var tc = getThemeColors();
+  tbody.innerHTML = page.map(function(g, i) {
+    var globalIdx = start + i;
+    var shortId = g.sessionId.length > 12 ? g.sessionId.substring(0, 12) + '\u2026' : g.sessionId;
+    var durationMs = tsToMs(g.lastTs) - tsToMs(g.firstTs);
+    var durStr = durationMs > 0 ? fmtDurMs(durationMs) : '<1s';
+    var errStyle = g.errors > 0 ? 'color:' + tc.red : '';
+    return '<tr class="clickable" onclick="cc_toggleSessionDetail(' + globalIdx + ', this)" title="' + escapeHTML(g.sessionId) + '">' +
+      '<td>' + escapeHTML(shortId) + '</td>' +
+      '<td>' + fmtTime(g.firstTs) + '</td>' +
+      '<td>' + durStr + '</td>' +
+      '<td>' + g.turns + '</td>' +
+      '<td>' + g.tools + '</td>' +
+      '<td>' + fmtNum(g.tokens) + '</td>' +
+      '<td>' + fmtCost(g.cost) + '</td>' +
+      '<td' + (errStyle ? ' style="' + errStyle + '"' : '') + '>' + g.errors + '</td>' +
+      '</tr>';
+  }).join('');
+  cc_updateSessionsPager(page.length);
+}
+
+function cc_toggleSessionDetail(groupIdx, clickedRow) {
+  var prev = document.querySelector('.cc-session-detail-row');
+  if (prev) {
+    var prevIdx = prev.dataset.idx;
+    prev.remove();
+    if (String(prevIdx) === String(groupIdx)) return;
+  }
+
+  var g = ccSessionsData[groupIdx];
+  if (!g) return;
+  var events = g.events.slice().sort(cc_sortPromptEvents);
+
+  var timeline = events.map(function(e, ei) {
+    var evt = (e.body || '').replace('claude_code.', '');
+    var badgeClass = 'badge-ok';
+    if (evt === 'user_prompt') badgeClass = 'badge-prompt';
+    else if (evt === 'api_error' || e.error) badgeClass = 'badge-error';
+    else if (evt === 'tool_result') badgeClass = 'badge-tool';
+    else if (evt === 'api_request') badgeClass = 'badge-request';
+
+    var parts = [];
+    if (e.model) parts.push(e.model);
+    if (e.tool) {
+      var cat = ccToolCategory(e.tool);
+      var icon = CC_CATEGORY_ICONS[cat] || '';
+      parts.push(icon + ' ' + e.tool);
+    }
+    if (e.inputTokens || e.outputTokens) {
+      var tokDetail = fmtNum(e.inputTokens) + ' in / ' + fmtNum(e.outputTokens) + ' out';
+      if (e.cacheRead) tokDetail += ' / ' + fmtNum(e.cacheRead) + ' cache';
+      parts.push(tokDetail);
+    }
+    if (e.cost) parts.push(fmtCost(e.cost));
+    if (e.duration != null) parts.push(fmtDurMs(Number(e.duration)));
+    if (e.success != null) parts.push(e.success === 'true' ? 'ok' : 'failed');
+    if (e.error) {
+      var errStr = String(e.error);
+      parts.push(errStr.length > 60 ? errStr.substring(0, 60) + '\u2026' : errStr);
+    }
+
+    var rowId = 'cc-sd-' + groupIdx + '-' + ei;
+    var attrJson = '';
+    try { attrJson = JSON.stringify(deepParseAttrs(e.attrs || {}), null, 2); } catch (_) { attrJson = '{}'; }
+
+    return '<div class="clickable" style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)" ' +
+      'onclick="var d=document.getElementById(\x27' + rowId + '\x27);var v=d.style.display===\x27none\x27;d.style.display=v?\x27block\x27:\x27none\x27;this.querySelector(\x27.expand-arrow\x27).textContent=v?\x27\\u25BC\x27:\x27\\u25B6\x27">' +
+      '<span class="expand-arrow" style="color:var(--text-muted);font-size:10px;margin-right:4px;display:inline-block;width:10px">&#9654;</span>' +
+      '<span style="color:var(--text-secondary);margin-right:6px">' + escapeHTML(fmtTime(e.timestamp)) + '</span>' +
+      '<span class="badge ' + badgeClass + '" style="font-size:10px">' + escapeHTML(evt.toUpperCase()) + '</span> ' +
+      escapeHTML(parts.join(' \u00b7 ')) +
+      '</div>' +
+      '<pre id="' + rowId + '" style="display:none;font-size:11px;color:var(--text-muted);' +
+      'background:var(--bg-secondary);padding:8px;margin:0 0 4px;border-radius:4px;' +
+      'overflow-x:auto;white-space:pre-wrap;word-break:break-all">' +
+      escapeHTML(attrJson) + '</pre>';
+  }).join('');
+
+  // File modifications (from Write/Edit/MultiEdit tool events)
+  var files = {};
+  events.forEach(function(e) {
+    if (e.body === 'claude_code.tool_result' && (e.tool === 'Write' || e.tool === 'Edit' || e.tool === 'MultiEdit')) {
+      var fp = cc_attr(e.attrs, 'file_path') || cc_attr(e.attrs, 'filePath');
+      if (fp) files[fp] = true;
+    }
+  });
+  var fileList = Object.keys(files);
+  var filesHtml = '';
+  if (fileList.length) {
+    filesHtml = '<div style="margin-top:8px"><strong>Files Modified (' + fileList.length + '):</strong>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">' +
+      fileList.map(function(f) { return escapeHTML(f); }).join('<br>') +
+      '</div></div>';
+  }
+
+  var detailRow = document.createElement('tr');
+  detailRow.className = 'cc-session-detail-row trace-detail-row';
+  detailRow.dataset.idx = groupIdx;
+  detailRow.innerHTML = '<td colspan="8"><div class="trace-detail-inner">' +
+    '<div class="detail-header"><h3>Session: ' + escapeHTML(g.sessionId) + '</h3>' +
+    '<button class="close-btn" onclick="this.closest(\'.cc-session-detail-row\').remove()">&times;</button></div>' +
+    '<div style="margin-bottom:8px;font-size:13px">' +
+    fmtNum(events.length) + ' events \u00b7 ' +
+    g.turns + ' turns \u00b7 ' +
+    g.tools + ' tool calls \u00b7 ' +
+    fmtNum(g.tokens) + ' tokens \u00b7 ' +
+    fmtCost(g.cost) + ' \u00b7 ' +
+    g.errors + ' errors</div>' +
+    filesHtml +
+    '<div style="max-height:400px;overflow-y:auto;margin-top:8px">' + timeline + '</div>' +
+    '</div></td>';
+  clickedRow.after(detailRow);
+}
+
+// ===================================================================
+// Claude Code view — Tools tab
+// ===================================================================
+async function cc_loadToolsTab() {
+  await Promise.all([
+    cc_loadToolsTable(),
+    cc_loadToolTrends(),
+    cc_loadToolFailures(),
+  ]);
+}
+
+async function cc_loadToolsTable() {
+  var tbody = document.getElementById('cc-tools-perf-body');
+  if (!tbody) return;
+  try {
+    var res = await query(
+      "SELECT json_get_string(log_attributes, 'tool_name') AS tool, " +
+      "COUNT(*) AS calls, " +
+      "SUM(CASE WHEN json_get_string(log_attributes, 'success') = 'true' THEN 1 ELSE 0 END) AS ok, " +
+      "ROUND(AVG(json_get_float(log_attributes, 'duration_ms')), 0) AS avg_ms, " +
+      "ROUND(APPROX_PERCENTILE_CONT(json_get_float(log_attributes, 'duration_ms'), 0.95), 0) AS p95_ms " +
+      "FROM opentelemetry_logs " +
+      "WHERE body = 'claude_code.tool_result' " +
+      "  AND timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
+      "GROUP BY tool ORDER BY calls DESC LIMIT 20"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">' + t('empty.no_tool_data') + '</td></tr>';
+      return;
+    }
+    var tc = getThemeColors();
+    tbody.innerHTML = data.map(function(d) {
+      var calls = Number(d.calls) || 0;
+      var ok = Number(d.ok) || 0;
+      var rate = calls > 0 ? ((ok / calls) * 100).toFixed(1) : '0.0';
+      var rateColor = Number(rate) >= 95 ? tc.green : Number(rate) >= 80 ? tc.yellow : tc.red;
+      var cat = ccToolCategory(d.tool);
+      var icon = CC_CATEGORY_ICONS[cat] || '';
+      return '<tr>' +
+        '<td>' + escapeHTML(d.tool || 'unknown') + '</td>' +
+        '<td>' + icon + ' ' + escapeHTML(cat) + '</td>' +
+        '<td>' + fmtNum(calls) + '</td>' +
+        '<td><span style="color:' + rateColor + '">' + rate + '%</span></td>' +
+        '<td>' + fmtDurMs(d.avg_ms) + '</td>' +
+        '<td>' + fmtDurMs(d.p95_ms) + '</td></tr>';
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">' + t('error.load_tool_perf') + '</td></tr>';
+  }
+}
+
+async function cc_loadToolTrends() {
+  try {
+    var bucket = currentTimeRange === '1h' ? '5 minutes' : (currentTimeRange === '7d' ? '1 hour' : '15 minutes');
+    var res = await query(
+      "SELECT date_bin('" + bucket + "'::INTERVAL, timestamp) AS t, " +
+      "json_get_string(log_attributes, 'tool_name') AS tool, " +
+      "COUNT(*) AS cnt " +
+      "FROM opentelemetry_logs " +
+      "WHERE body = 'claude_code.tool_result' " +
+      "  AND timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
+      "GROUP BY t, tool ORDER BY t"
+    );
+    var raw = rowsToObjects(res);
+    if (!raw.length) return;
+
+    // Get top 6 tools by total count
+    var toolTotals = {};
+    raw.forEach(function(r) {
+      toolTotals[r.tool] = (toolTotals[r.tool] || 0) + (Number(r.cnt) || 0);
+    });
+    var topTools = Object.keys(toolTotals).sort(function(a, b) { return toolTotals[b] - toolTotals[a]; }).slice(0, 6);
+
+    // Pivot: time -> { t, tool1: cnt, tool2: cnt, ... }
+    var timeMap = {};
+    raw.forEach(function(r) {
+      if (topTools.indexOf(r.tool) < 0) return;
+      if (!timeMap[r.t]) timeMap[r.t] = { t: r.t };
+      timeMap[r.t][r.tool] = Number(r.cnt) || 0;
+    });
+    var data = Object.values(timeMap).sort(function(a, b) { return String(a.t) < String(b.t) ? -1 : 1; });
+
+    var seriesDefs = topTools.map(function(tool, i) {
+      return { label: tool, key: tool, color: chartColors[i % chartColors.length] };
+    });
+    renderChart('cc-tool-trends-chart', data, seriesDefs, function(v) { return fmtNum(v); });
+  } catch { /* no data */ }
+}
+
+async function cc_loadToolFailures() {
+  var tbody = document.getElementById('cc-tools-failures-body');
+  if (!tbody) return;
+  try {
+    var res = await query(
+      "SELECT timestamp, " +
+      "json_get_string(log_attributes, 'tool_name') AS tool, " +
+      "json_get_string(log_attributes, 'error') AS error, " +
+      "json_get_float(log_attributes, 'duration_ms') AS duration_ms, " +
+      "log_attributes " +
+      "FROM opentelemetry_logs " +
+      "WHERE body = 'claude_code.tool_result' " +
+      "  AND json_get_string(log_attributes, 'success') = 'false' " +
+      "  AND timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
+      "ORDER BY timestamp DESC LIMIT 20"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">No recent failures.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(d, i) {
+      var errText = d.error || 'unknown error';
+      if (errText.length > 80) errText = errText.substring(0, 80) + '\u2026';
+      var rowId = 'cc-fail-' + i;
+      var attrJson = '';
+      try { var la = typeof d.log_attributes === 'string' ? JSON.parse(d.log_attributes) : (d.log_attributes || {}); attrJson = JSON.stringify(deepParseAttrs(la), null, 2); } catch { attrJson = String(d.log_attributes || ''); }
+      return '<tr class="clickable" onclick="var d=document.getElementById(\x27' + rowId + '\x27);var v=d.style.display===\x27none\x27;d.style.display=v?\x27table-row\x27:\x27none\x27;this.querySelector(\x27.expand-arrow\x27).textContent=v?\x27\\u25BC\x27:\x27\\u25B6\x27">' +
+        '<td><span class="expand-arrow" style="color:var(--text-muted);font-size:10px;margin-right:4px;display:inline-block;width:10px">&#9654;</span>' + fmtTime(d.timestamp) + '</td>' +
+        '<td>' + escapeHTML(d.tool || 'unknown') + '</td>' +
+        '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis" title="' + escapeHTML(d.error || '') + '">' + escapeHTML(errText) + '</td>' +
+        '<td>' + fmtDurMs(d.duration_ms) + '</td></tr>' +
+        '<tr id="' + rowId + '" style="display:none"><td colspan="4"><pre style="margin:0;padding:8px 12px;font-size:12px;background:var(--bg-secondary);border-radius:4px;white-space:pre-wrap;word-break:break-all">' + escapeHTML(attrJson) + '</pre></td></tr>';
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Failed to load failures.</td></tr>';
+  }
 }

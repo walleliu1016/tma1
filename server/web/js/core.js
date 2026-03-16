@@ -9,6 +9,14 @@ function intervalSQL() {
   return m[currentTimeRange] || '1 day';
 }
 
+// Session query row limit scaled by time range.
+// Typical agent usage: ~1k events/day. These limits should cover all but
+// the most extreme workloads, while keeping browser performance reasonable.
+function sessionQueryLimit() {
+  var m = { '1h': 5000, '6h': 10000, '24h': 20000, '7d': 50000 };
+  return m[currentTimeRange] || 20000;
+}
+
 async function query(sql) {
   var r = await fetch(API, {
     method: 'POST',
@@ -84,6 +92,21 @@ function tsToMs(v) {
 function fmtTime(ts) {
   if (!ts) return '';
   return new Date(tsToMs(ts)).toLocaleString();
+}
+
+// Deep-parse stringified JSON values in an attributes object for display.
+// e.g. tool_parameters: "{\"cmd\":\"ls\"}" → tool_parameters: {cmd:"ls"}
+function deepParseAttrs(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  var out = {};
+  Object.keys(obj).forEach(function(k) {
+    var v = obj[k];
+    if (typeof v === 'string' && v.length > 1 && (v[0] === '{' || v[0] === '[')) {
+      try { out[k] = JSON.parse(v); return; } catch {}
+    }
+    out[k] = v;
+  });
+  return out;
 }
 
 function escapeHTML(s) {

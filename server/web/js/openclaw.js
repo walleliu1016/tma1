@@ -9,6 +9,10 @@ var ocTracePage = 0;
 var ocTracePageSize = 15;
 var ocTraceHasNext = false;
 var ocTraceColumnsPromise = null;
+var ocSessionsPage = 0;
+var ocSessionsPageSize = 10;
+var ocSessionsHasNext = false;
+var ocSessionsData = [];
 
 function oc_shortSpanName(name) {
   return (name || '').replace('openclaw.', '');
@@ -452,6 +456,343 @@ async function oc_loadRunDurationChart() {
 
 function oc_loadMetricsExplorer() {
   initMetricsExplorer('oc-metrics');
+}
+
+// ===================================================================
+// OpenClaw view — Sessions tab
+// ===================================================================
+function oc_prevSessionsPage() {
+  if (ocSessionsPage <= 0) return;
+  ocSessionsPage--;
+  oc_renderSessions();
+}
+
+function oc_nextSessionsPage() {
+  if (!ocSessionsHasNext) return;
+  ocSessionsPage++;
+  oc_renderSessions();
+}
+
+function oc_updateSessionsPager(resultCount) {
+  var prevBtn = document.getElementById('oc-sessions-prev-btn');
+  var nextBtn = document.getElementById('oc-sessions-next-btn');
+  var info = document.getElementById('oc-sessions-page-info');
+  if (!prevBtn || !nextBtn || !info) return;
+  prevBtn.disabled = ocSessionsPage <= 0;
+  nextBtn.disabled = !ocSessionsHasNext;
+  if (!resultCount) { info.textContent = 'No results'; return; }
+  var start = ocSessionsPage * ocSessionsPageSize + 1;
+  var end = start + resultCount - 1;
+  info.textContent = 'Page ' + (ocSessionsPage + 1) + ' \u00b7 ' + start + '-' + end;
+}
+
+async function oc_loadSessions() {
+  ocSessionsPage = 0;
+  var tbody = document.getElementById('oc-sessions-body');
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.loading') + '</td></tr>';
+
+  var iv = intervalSQL();
+  var filter = (document.getElementById('oc-session-filter').value || '').trim();
+
+  try {
+    var cols = await oc_getTraceColumns();
+    var hasSessionKey = !!cols['span_attributes.openclaw.sessionKey'];
+    var hasChannel = !!cols['span_attributes.openclaw.channel'];
+    var hasInputTok = !!cols['span_attributes.openclaw.tokens.input'];
+    var hasOutputTok = !!cols['span_attributes.openclaw.tokens.output'];
+
+    if (hasSessionKey) {
+      // GROUP BY sessionKey at SQL level
+      var sessionSel = '"span_attributes.openclaw.sessionKey"';
+      var channelSel = hasChannel
+        ? 'MAX("span_attributes.openclaw.channel")' : 'NULL';
+      var inputSel = hasInputTok
+        ? 'SUM(CAST("span_attributes.openclaw.tokens.input" AS DOUBLE))' : '0';
+      var outputSel = hasOutputTok
+        ? 'SUM(CAST("span_attributes.openclaw.tokens.output" AS DOUBLE))' : '0';
+
+      var where = "WHERE " + OC_ALL_SPANS + " AND timestamp > NOW() - INTERVAL '" + iv + "'";
+      if (filter) {
+        where += " AND " + sessionSel + " LIKE '%" + escapeSQLString(filter) + "%'";
+      }
+
+      await loadPricing();
+      var costExpr = costCaseSQL(
+        '"span_attributes.openclaw.model"',
+        '"span_attributes.openclaw.tokens.input"',
+        '"span_attributes.openclaw.tokens.output"'
+      );
+
+      var res = await query(
+        "SELECT " + sessionSel + " AS session_key, " +
+        channelSel + " AS channel, " +
+        "MIN(timestamp) AS started_at, " +
+        "MAX(timestamp) AS ended_at, " +
+        "COUNT(*) AS span_count, " +
+        "SUM(CASE WHEN span_name='openclaw.message.processed' THEN 1 ELSE 0 END) AS messages, " +
+        inputSel + " AS input_tok, " +
+        outputSel + " AS output_tok, " +
+        "SUM(CASE WHEN span_status_code='STATUS_CODE_ERROR' THEN 1 ELSE 0 END) AS errors " +
+        "FROM opentelemetry_traces " +
+        where +
+        " GROUP BY session_key ORDER BY started_at DESC LIMIT 200"
+      );
+      var data = rowsToObjects(res);
+
+      // Estimate cost per session — query cost sums grouped by session
+      var costData = [];
+      if (data.length > 0) {
+        try {
+          var costRes = await query(
+            "SELECT " + sessionSel + " AS session_key, " +
+            "ROUND(SUM(" + costExpr + "), 4) AS total_cost " +
+            "FROM opentelemetry_traces " +
+            "WHERE " + OC_MODEL_SPAN + " AND timestamp > NOW() - INTERVAL '" + iv + "' " +
+            "GROUP BY session_key"
+          );
+          costData = rowsToObjects(costRes);
+        } catch { /* cost estimation failed */ }
+      }
+      var costMap = {};
+      costData.forEach(function(c) { costMap[c.session_key] = Number(c.total_cost) || 0; });
+
+      ocSessionsData = data.map(function(d) {
+        var totalTok = (Number(d.input_tok) || 0) + (Number(d.output_tok) || 0);
+        return {
+          session_key: d.session_key || '\u2014',
+          channel: d.channel || '\u2014',
+          started_at: d.started_at,
+          ended_at: d.ended_at,
+          messages: Number(d.messages) || 0,
+          tokens: totalTok,
+          cost: costMap[d.session_key] || 0,
+          errors: Number(d.errors) || 0,
+        };
+      });
+    } else {
+      // Fallback: group by trace_id
+      var modelSel2 = oc_traceAttrSelect(cols, 'span_attributes.openclaw.model', 'model');
+      var channelSel2 = oc_traceAttrSelect(cols, 'span_attributes.openclaw.channel', 'channel');
+      var inputSel2 = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.input', 'input_tok');
+      var outputSel2 = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.output', 'output_tok');
+
+      var res2 = await query(
+        "SELECT trace_id, " + modelSel2 + ", " + channelSel2 + ", " +
+        inputSel2 + ", " + outputSel2 + ", " +
+        "timestamp, span_name, span_status_code, " +
+        "ROUND(duration_nano / 1000000.0, 1) AS duration_ms " +
+        "FROM opentelemetry_traces " +
+        "WHERE " + OC_ALL_SPANS + " AND timestamp > NOW() - INTERVAL '" + iv + "' " +
+        "ORDER BY timestamp DESC LIMIT 2000"
+      );
+      var allSpans = rowsToObjects(res2);
+
+      // Group by trace_id
+      var traceMap = {};
+      allSpans.forEach(function(s) {
+        var tid = s.trace_id;
+        if (!traceMap[tid]) {
+          traceMap[tid] = {
+            session_key: tid.substring(0, 12),
+            channel: s.channel || '\u2014',
+            started_at: s.timestamp,
+            ended_at: s.timestamp,
+            messages: 0,
+            tokens: 0,
+            cost: 0,
+            errors: 0,
+          };
+        }
+        var grp = traceMap[tid];
+        if (s.timestamp < grp.started_at) grp.started_at = s.timestamp;
+        if (s.timestamp > grp.ended_at) grp.ended_at = s.timestamp;
+        if (s.span_name === 'openclaw.message.processed') grp.messages++;
+        grp.tokens += (Number(s.input_tok) || 0) + (Number(s.output_tok) || 0);
+        if (s.span_status_code === 'STATUS_CODE_ERROR') grp.errors++;
+        if (s.channel && s.channel !== '\u2014') grp.channel = s.channel;
+      });
+      ocSessionsData = Object.values(traceMap).sort(function(a, b) {
+        return String(b.started_at) < String(a.started_at) ? -1 : 1;
+      });
+    }
+
+    oc_renderSessions();
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Error: ' + escapeHTML(err.message) + '</td></tr>';
+    oc_updateSessionsPager(0);
+  }
+}
+
+function oc_renderSessions() {
+  var tbody = document.getElementById('oc-sessions-body');
+  var start = ocSessionsPage * ocSessionsPageSize;
+  var page = ocSessionsData.slice(start, start + ocSessionsPageSize + 1);
+  ocSessionsHasNext = page.length > ocSessionsPageSize;
+  if (ocSessionsHasNext) page = page.slice(0, ocSessionsPageSize);
+
+  if (!page.length) {
+    if (ocSessionsPage > 0) { ocSessionsPage--; oc_renderSessions(); return; }
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.no_data') + '</td></tr>';
+    oc_updateSessionsPager(0);
+    return;
+  }
+
+  tbody.innerHTML = page.map(function(d, i) {
+    var idx = start + i;
+    var startMs = parseTimestamp(d.started_at);
+    var endMs = parseTimestamp(d.ended_at);
+    var durMs = (!isNaN(startMs) && !isNaN(endMs)) ? endMs - startMs : 0;
+    var durStr = durMs < 1000 ? Math.round(durMs) + 'ms'
+      : durMs < 60000 ? (durMs / 1000).toFixed(1) + 's'
+      : (durMs / 60000).toFixed(1) + 'min';
+    var errHtml = d.errors > 0
+      ? '<span class="badge badge-error">' + d.errors + '</span>'
+      : '0';
+    return '<tr class="clickable" onclick="oc_toggleSessionDetail(this, ' + idx + ')">' +
+      '<td title="' + escapeHTML(d.session_key) + '">' + escapeHTML(d.session_key.length > 16 ? d.session_key.substring(0, 16) + '\u2026' : d.session_key) + '</td>' +
+      '<td>' + escapeHTML(d.channel) + '</td>' +
+      '<td>' + fmtNum(d.messages) + '</td>' +
+      '<td>' + fmtNum(d.tokens) + '</td>' +
+      '<td>' + fmtCost(d.cost) + '</td>' +
+      '<td>' + durStr + '</td>' +
+      '<td>' + errHtml + '</td></tr>';
+  }).join('');
+  oc_updateSessionsPager(page.length);
+}
+
+async function oc_toggleSessionDetail(clickedRow, idx) {
+  // Collapse if already expanded
+  var prev = clickedRow.nextElementSibling;
+  if (prev && prev.classList.contains('oc-session-detail-row')) {
+    prev.remove();
+    clickedRow.classList.remove('active-trace');
+    return;
+  }
+  // Collapse any other open detail
+  var existing = document.querySelector('.oc-session-detail-row');
+  if (existing) {
+    var ep = existing.previousElementSibling;
+    if (ep) ep.classList.remove('active-trace');
+    existing.remove();
+  }
+
+  clickedRow.classList.add('active-trace');
+  var session = ocSessionsData[idx];
+  if (!session) return;
+
+  var detailRow = document.createElement('tr');
+  detailRow.className = 'oc-session-detail-row trace-detail-row';
+  detailRow.innerHTML = '<td colspan="7"><div class="trace-detail-inner" style="padding:12px">' +
+    '<div class="loading">' + t('empty.loading') + '</div></div></td>';
+  clickedRow.after(detailRow);
+
+  // Fetch spans for this session
+  var iv = intervalSQL();
+  try {
+    var cols = await oc_getTraceColumns();
+    var hasSessionKey = !!cols['span_attributes.openclaw.sessionKey'];
+    var modelSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.model', 'model');
+    var channelSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.channel', 'channel');
+    var providerSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.provider', 'provider');
+    var inputSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.input', 'input_tok');
+    var outputSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.output', 'output_tok');
+    var cacheReadSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.cache_read', 'cache_read');
+    var cacheWriteSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.cache_write', 'cache_write');
+    var totalTokSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.tokens.total', 'total_tok');
+    var outcomeSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.outcome', 'outcome');
+    var messageSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.messageId', 'message_id');
+    var sessionIdSel = oc_traceAttrSelect(cols, 'span_attributes.openclaw.sessionId', 'session_id');
+
+    var where;
+    if (hasSessionKey) {
+      where = "WHERE " + OC_ALL_SPANS +
+        " AND \"span_attributes.openclaw.sessionKey\" = '" + escapeSQLString(session.session_key) + "'" +
+        " AND timestamp > NOW() - INTERVAL '" + iv + "'";
+    } else {
+      where = "WHERE " + OC_ALL_SPANS +
+        " AND trace_id LIKE '" + escapeSQLString(session.session_key) + "%'" +
+        " AND timestamp > NOW() - INTERVAL '" + iv + "'";
+    }
+
+    var res = await query(
+      "SELECT timestamp, trace_id, span_name, span_status_code, " +
+      modelSel + ", " + channelSel + ", " + providerSel + ", " +
+      inputSel + ", " + outputSel + ", " + cacheReadSel + ", " +
+      cacheWriteSel + ", " + totalTokSel + ", " +
+      outcomeSel + ", " + messageSel + ", " + sessionIdSel + ", " +
+      "ROUND(duration_nano / 1000000.0, 1) AS duration_ms " +
+      "FROM opentelemetry_traces " +
+      where + " ORDER BY timestamp LIMIT 100"
+    );
+    var spans = rowsToObjects(res);
+    var inner = detailRow.querySelector('.trace-detail-inner');
+
+    if (!spans.length) {
+      inner.innerHTML = '<div class="loading">' + t('empty.no_data') + '</div>';
+      return;
+    }
+
+    var html = '<div style="margin-bottom:8px"><strong>Session:</strong> ' + escapeHTML(session.session_key) +
+      ' &middot; <strong>Spans:</strong> ' + spans.length + '</div>';
+    html += '<div style="max-height:400px;overflow-y:auto">';
+    html += spans.map(function(s, si) {
+      var shortName = oc_shortSpanName(s.span_name);
+      var isErr = s.span_status_code === 'STATUS_CODE_ERROR';
+      var badgeClass = isErr ? ' badge-error' : '';
+      var parts = [];
+      if (s.model) parts.push(s.model);
+      if (s.channel) parts.push(s.channel);
+      if (s.input_tok || s.output_tok) parts.push(fmtNum(s.input_tok) + ' in / ' + fmtNum(s.output_tok) + ' out');
+      if (s.duration_ms != null) parts.push(fmtDurMs(s.duration_ms));
+      if (s.outcome) parts.push(s.outcome);
+      if (isErr) parts.push('ERROR');
+
+      var rowId = 'oc-sd-' + idx + '-' + si;
+      // Build attribute detail
+      var attrPairs = [];
+      attrPairs.push(['span_name', s.span_name]);
+      attrPairs.push(['trace_id', s.trace_id]);
+      attrPairs.push(['status', s.span_status_code]);
+      if (s.model) attrPairs.push(['model', s.model]);
+      if (s.channel) attrPairs.push(['channel', s.channel]);
+      if (s.provider) attrPairs.push(['provider', s.provider]);
+      if (s.outcome) attrPairs.push(['outcome', s.outcome]);
+      if (s.message_id) attrPairs.push(['messageId', s.message_id]);
+      if (s.session_id) attrPairs.push(['sessionId', s.session_id]);
+      if (s.input_tok) attrPairs.push(['tokens.input', s.input_tok]);
+      if (s.output_tok) attrPairs.push(['tokens.output', s.output_tok]);
+      if (s.cache_read) attrPairs.push(['tokens.cache_read', s.cache_read]);
+      if (s.cache_write) attrPairs.push(['tokens.cache_write', s.cache_write]);
+      if (s.total_tok) attrPairs.push(['tokens.total', s.total_tok]);
+      if (s.duration_ms != null) attrPairs.push(['duration_ms', s.duration_ms]);
+      var attrJson = '{\n' + attrPairs.map(function(p) { return '  "' + p[0] + '": ' + JSON.stringify(p[1]); }).join(',\n') + '\n}';
+
+      return '<div class="clickable" style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)" ' +
+        'onclick="var d=document.getElementById(\x27' + rowId + '\x27);var v=d.style.display===\x27none\x27;d.style.display=v?\x27block\x27:\x27none\x27;this.querySelector(\x27.expand-arrow\x27).textContent=v?\x27\\u25BC\x27:\x27\\u25B6\x27">' +
+        '<span class="expand-arrow" style="color:var(--text-muted);font-size:10px;margin-right:4px;display:inline-block;width:10px">&#9654;</span>' +
+        '<span style="color:var(--text-secondary);margin-right:6px">' + escapeHTML(fmtTime(s.timestamp)) + '</span>' +
+        '<span class="badge' + badgeClass + '" style="font-size:10px">' + escapeHTML(shortName) + '</span> ' +
+        escapeHTML(parts.join(' \u00b7 ')) +
+        '</div>' +
+        '<pre id="' + rowId + '" style="display:none;font-size:11px;color:var(--text-muted);' +
+        'background:var(--bg-secondary);padding:8px;margin:0 0 4px;border-radius:4px;' +
+        'overflow-x:auto;white-space:pre-wrap;word-break:break-all">' +
+        escapeHTML(attrJson) + '</pre>';
+    }).join('');
+    html += '</div>';
+
+    // Link to filter traces by this session
+    if (hasSessionKey) {
+      html += '<div style="margin-top:8px">' +
+        '<button class="filter-btn primary" onclick="oc_filterBySession(\'' + escapeJSString(session.session_key) + '\')">' +
+        'View in Traces tab</button></div>';
+    }
+
+    inner.innerHTML = html;
+  } catch (err) {
+    var inner2 = detailRow.querySelector('.trace-detail-inner');
+    inner2.innerHTML = '<div class="loading">Error: ' + escapeHTML(err.message) + '</div>';
+  }
 }
 
 // ===================================================================
@@ -918,48 +1259,6 @@ async function oc_switchToTrace(traceId) {
   }
 }
 
-// ===================================================================
-// OpenClaw view — Search tab
-// ===================================================================
-async function oc_doSearch() {
-  var term = document.getElementById('oc-search-input').value.trim();
-  if (!term) return;
-  var el = document.getElementById('oc-search-results');
-  el.innerHTML = '<div class="loading">' + t('empty.searching') + '</div>';
-
-  try {
-    var safeTerm = escapeSQLString(term);
-    var res = await query(
-      "SELECT timestamp, trace_id, span_name, span_status_code, " +
-      "\"span_attributes.openclaw.model\" AS model, " +
-      "\"span_attributes.openclaw.channel\" AS channel " +
-      "FROM opentelemetry_traces " +
-      "WHERE " + OC_ALL_SPANS +
-      "  AND (\"span_attributes.openclaw.model\" LIKE '%" + safeTerm + "%' " +
-      "    OR \"span_attributes.openclaw.channel\" LIKE '%" + safeTerm + "%' " +
-      "    OR span_name LIKE '%" + safeTerm + "%') " +
-      "  AND timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
-      "ORDER BY timestamp DESC LIMIT 50"
-    );
-    var data = rowsToObjects(res);
-    if (!data.length) { el.innerHTML = '<div class="loading">' + t('empty.no_results') + '</div>'; return; }
-    el.innerHTML = data.map(function(d) {
-      var isErr = d.span_status_code === 'STATUS_CODE_ERROR';
-      return '<div class="search-result-item" onclick="oc_switchToTrace(\'' + escapeJSString(d.trace_id) + '\')">' +
-      '<div class="search-result-meta">' +
-      '<span>' + fmtTime(d.timestamp) + '</span>' +
-      '<span class="badge' + (isErr ? ' badge-error' : '') + '">' + escapeHTML(oc_shortSpanName(d.span_name)) + '</span>' +
-      '<span>' + escapeHTML(d.model || '') + '</span>' +
-      '<span>' + escapeHTML(d.channel || '') + '</span>' +
-      '</div>' +
-      '<div class="search-result-content">' + escapeHTML(d.model || 'unknown') + ' &middot; ' + escapeHTML(d.channel || '') + '</div>' +
-      '</div>';
-    }).join('');
-  } catch (err) {
-    el.innerHTML = '<div class="loading">' + t('error.search') + escapeHTML(err.message) + '</div>';
-  }
-}
-
 async function oc_loadAnomalies() {
   var el = document.getElementById('oc-anomaly-list');
   el.innerHTML = '<div class="loading">' + t('empty.loading_anomalies') + '</div>';
@@ -1020,10 +1319,6 @@ async function oc_loadAnomalies() {
   }
 }
 
-function oc_loadSearch() {
-  oc_loadAnomalies();
-}
-
 // ===================================================================
 // OpenClaw view — Security tab (behavioral anomaly monitoring)
 // ===================================================================
@@ -1035,6 +1330,7 @@ async function oc_loadSecurityTab() {
     oc_loadWebhookTimeline(),
     oc_loadTokenAnomalies(),
     oc_loadChannelActivity(),
+    oc_loadAnomalies(),
   ]);
 }
 
@@ -1242,8 +1538,8 @@ async function oc_loadChannelActivity() {
 
 function oc_onTabChange(tab) {
   if (tab === 'oc-overview') oc_loadOverview();
+  else if (tab === 'oc-sessions') oc_loadSessions();
   else if (tab === 'oc-traces') oc_loadTraces();
   else if (tab === 'oc-cost') oc_loadCostTab();
   else if (tab === 'oc-security') oc_loadSecurityTab();
-  else if (tab === 'oc-search') oc_loadSearch();
 }

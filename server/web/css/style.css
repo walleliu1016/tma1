@@ -468,8 +468,9 @@ tr.active-trace td { background: var(--bg-hover); }
 .me-legend-item { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
 .me-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-/* --- Loading --- */
+/* --- Loading / Warnings --- */
 .loading { color: var(--text-dim); font-size: 13px; padding: 20px; text-align: center; }
+.truncation-warning { background: var(--yellow); color: #000; font-size: 12px; padding: 6px 12px; border-radius: 4px; margin-bottom: 8px; }
 
 /* --- Responsive --- */
 @media (max-width: 768px) {

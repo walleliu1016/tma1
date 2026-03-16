@@ -120,7 +120,8 @@
 
     <div class="tabs" id="cc-tabs">
       <button class="tab active" data-cctab="cc-overview" data-i18n="tab.cc_overview">Overview</button>
-      <button class="tab" data-cctab="cc-events" data-i18n="tab.cc_events">Events</button>
+      <button class="tab" data-cctab="cc-sessions" data-i18n="tab.cc_sessions">Sessions</button>
+      <button class="tab" data-cctab="cc-tools" data-i18n="tab.cc_tools">Tools</button>
       <button class="tab" data-cctab="cc-cost" data-i18n="tab.cc_cost">Cost</button>
       <button class="tab" data-cctab="cc-search" data-i18n="tab.cc_search">Search</button>
     </div>
@@ -142,29 +143,6 @@
       <div class="chart-container">
         <h3 data-i18n="section.error_rate">Error Rate</h3>
         <div id="cc-chart-errors"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
-      </div>
-      <div class="chart-container">
-        <h3 data-i18n="section.tool_distribution">Tool Call Distribution</h3>
-        <div id="cc-tool-distribution" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
-      </div>
-      <div class="chart-container">
-        <h3 data-i18n="section.tool_performance">Tool Performance</h3>
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th data-i18n="table.tool">Tool</th>
-                <th data-i18n="table.calls">Calls</th>
-                <th data-i18n="table.success_rate">Success Rate</th>
-                <th data-i18n="table.avg_latency">Avg Latency</th>
-                <th data-i18n="table.data_read">Data Read</th>
-              </tr>
-            </thead>
-            <tbody id="cc-tool-perf-body">
-              <tr><td colspan="5" class="loading" data-i18n="empty.loading">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
       <div class="chart-container">
         <h3 data-i18n="section.activity_heatmap">Activity Heatmap</h3>
@@ -191,52 +169,84 @@
       </div>
     </div>
 
-    <!-- CC Events -->
-    <div class="tab-content" id="tab-cc-events">
+    <!-- CC Sessions -->
+    <div class="tab-content" id="tab-cc-sessions">
       <div class="filters">
-        <select class="filter-select" id="cc-event-filter" onchange="cc_onEventsFilterChange()">
-          <option value="" data-i18n="filter.all_events">All events</option>
-          <option value="claude_code.api_request">api_request</option>
-          <option value="claude_code.tool_result">tool_result</option>
-          <option value="claude_code.api_error">api_error</option>
-          <option value="claude_code.user_prompt">user_prompt</option>
-          <option value="claude_code.tool_decision">tool_decision</option>
-        </select>
-        <button class="filter-btn primary" onclick="cc_loadEvents()" data-i18n="btn.refresh">Refresh</button>
+        <input class="filter-input" id="cc-session-filter" type="text"
+               placeholder="Filter by session.id or prompt.id..." onkeydown="if(event.key==='Enter')cc_loadSessions()" />
+        <button class="filter-btn primary" onclick="cc_loadSessions()" data-i18n="btn.refresh">Refresh</button>
+      </div>
+      <div id="cc-sessions-truncation" class="truncation-warning" style="display:none">
+        Results may be incomplete. Try a shorter time range for accurate totals.
       </div>
       <div style="overflow-x:auto">
-        <table id="cc-events-table">
+        <table>
           <thead>
             <tr>
-              <th data-i18n="table.timestamp">Timestamp</th>
-              <th data-i18n="table.event">Event</th>
-              <th data-i18n="table.model">Model</th>
+              <th data-i18n="table.session">Session</th>
+              <th data-i18n="table.started">Started</th>
+              <th>Duration</th>
+              <th>Turns</th>
+              <th>Tools</th>
               <th data-i18n="table.tokens">Tokens</th>
-              <th data-i18n="table.cache">Cache</th>
               <th data-i18n="table.cost">Cost</th>
-              <th data-i18n="table.duration">Duration</th>
-              <th data-i18n="table.status">Status</th>
+              <th>Errors</th>
             </tr>
           </thead>
-          <tbody id="cc-events-body">
-            <tr><td colspan="8" class="loading" data-i18n="empty.loading_events">Loading events...</td></tr>
+          <tbody id="cc-sessions-body">
+            <tr><td colspan="8" class="loading" data-i18n="empty.loading">Loading...</td></tr>
           </tbody>
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="cc-events-prev-btn" onclick="cc_prevEventsPage()">Prev</button>
-        <span id="cc-events-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="cc-events-next-btn" onclick="cc_nextEventsPage()">Next</button>
+        <button class="filter-btn" id="cc-sessions-prev-btn" onclick="cc_prevSessionsPage()">Prev</button>
+        <span id="cc-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
+        <button class="filter-btn" id="cc-sessions-next-btn" onclick="cc_nextSessionsPage()">Next</button>
       </div>
-      <div class="chart-container" style="margin-top:16px">
-        <h3>Prompt/Session Traces</h3>
-        <div class="filters">
-          <input class="filter-input" id="cc-prompt-trace-filter" type="text"
-                 placeholder="Filter by prompt.id or session.id..." onkeydown="if(event.key==='Enter')cc_loadPromptTraces()" />
-          <button class="filter-btn primary" onclick="cc_loadPromptTraces()">Refresh</button>
+    </div>
+
+    <!-- CC Tools -->
+    <div class="tab-content" id="tab-cc-tools">
+      <div class="chart-container">
+        <h3 data-i18n="section.tool_performance">Tool Performance</h3>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="table.tool">Tool</th>
+                <th>Category</th>
+                <th data-i18n="table.calls">Calls</th>
+                <th data-i18n="table.success_rate">Success Rate</th>
+                <th data-i18n="table.avg_latency">Avg Latency</th>
+                <th>P95</th>
+              </tr>
+            </thead>
+            <tbody id="cc-tools-perf-body">
+              <tr><td colspan="6" class="loading" data-i18n="empty.loading">Loading...</td></tr>
+            </tbody>
+          </table>
         </div>
-        <div id="cc-prompt-traces">
-          <div class="loading">Loading prompt traces...</div>
+      </div>
+      <div class="chart-container">
+        <h3>Tool Trends</h3>
+        <div id="cc-tool-trends-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      </div>
+      <div class="chart-container">
+        <h3>Recent Failures</h3>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="table.timestamp">Timestamp</th>
+                <th data-i18n="table.tool">Tool</th>
+                <th>Error</th>
+                <th data-i18n="table.duration">Duration</th>
+              </tr>
+            </thead>
+            <tbody id="cc-tools-failures-body">
+              <tr><td colspan="4" class="loading" data-i18n="empty.loading">Loading...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -347,7 +357,8 @@
 
     <div class="tabs" id="cdx-tabs">
       <button class="tab active" data-cdxtab="cdx-overview">Overview</button>
-      <button class="tab" data-cdxtab="cdx-events">Events</button>
+      <button class="tab" data-cdxtab="cdx-sessions">Sessions</button>
+      <button class="tab" data-cdxtab="cdx-tools">Tools</button>
       <button class="tab" data-cdxtab="cdx-cost">Cost</button>
     </div>
 
@@ -367,28 +378,6 @@
       <div class="chart-container">
         <h3>Trace Span Distribution</h3>
         <div id="cdx-span-dist" class="bar-chart"><div class="chart-empty">Waiting for data...</div></div>
-      </div>
-      <div class="chart-container">
-        <h3>Request Outcome</h3>
-        <div id="cdx-request-outcome" class="bar-chart"><div class="chart-empty">Waiting for data...</div></div>
-      </div>
-      <div class="chart-container">
-        <h3>Tool Performance</h3>
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Tool</th>
-                <th>Calls</th>
-                <th>Success Rate</th>
-                <th>Avg Latency</th>
-              </tr>
-            </thead>
-            <tbody id="cdx-tool-perf-body">
-              <tr><td colspan="4" class="loading">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
       <div class="chart-container">
         <h3 data-i18n="section.activity_heatmap">Activity Heatmap</h3>
@@ -415,38 +404,82 @@
       </div>
     </div>
 
-    <div class="tab-content" id="tab-cdx-events">
+    <!-- Codex Sessions -->
+    <div class="tab-content" id="tab-cdx-sessions">
       <div class="filters">
-        <select class="filter-select" id="cdx-event-filter" onchange="cdx_onEventsFilterChange()">
-          <option value="">All events</option>
-          <option value="requests">API requests</option>
-          <option value="tools">Tool results</option>
-          <option value="decisions">Tool decisions</option>
-        </select>
-        <button class="filter-btn primary" onclick="cdx_loadEvents()">Refresh</button>
+        <input class="filter-input" id="cdx-session-filter" type="text"
+               placeholder="Filter by call_id..." onkeydown="if(event.key==='Enter')cdx_loadSessions()" />
+        <button class="filter-btn primary" onclick="cdx_loadSessions()" data-i18n="btn.refresh">Refresh</button>
+      </div>
+      <div id="cdx-sessions-truncation" class="truncation-warning" style="display:none">
+        Results may be incomplete. Try a shorter time range for accurate totals.
       </div>
       <div style="overflow-x:auto">
         <table>
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Type</th>
-              <th>Model</th>
-              <th>Tokens</th>
-              <th>Tool</th>
-              <th>Duration</th>
-              <th>Status</th>
+              <th>Turn</th>
+              <th data-i18n="table.model">Model</th>
+              <th data-i18n="table.tokens">Tokens</th>
+              <th>Tools</th>
+              <th data-i18n="table.cost">Cost</th>
+              <th data-i18n="table.duration">Duration</th>
+              <th data-i18n="table.status">Status</th>
             </tr>
           </thead>
-          <tbody id="cdx-events-body">
-            <tr><td colspan="7" class="loading">Loading events...</td></tr>
+          <tbody id="cdx-sessions-body">
+            <tr><td colspan="7" class="loading" data-i18n="empty.loading">Loading...</td></tr>
           </tbody>
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="cdx-events-prev-btn" onclick="cdx_prevEventsPage()">Prev</button>
-        <span id="cdx-events-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="cdx-events-next-btn" onclick="cdx_nextEventsPage()">Next</button>
+        <button class="filter-btn" id="cdx-sessions-prev-btn" onclick="cdx_prevSessionsPage()">Prev</button>
+        <span id="cdx-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
+        <button class="filter-btn" id="cdx-sessions-next-btn" onclick="cdx_nextSessionsPage()">Next</button>
+      </div>
+    </div>
+
+    <!-- Codex Tools -->
+    <div class="tab-content" id="tab-cdx-tools">
+      <div class="chart-container">
+        <h3 data-i18n="section.tool_performance">Tool Performance</h3>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="table.tool">Tool</th>
+                <th data-i18n="table.calls">Calls</th>
+                <th data-i18n="table.success_rate">Success Rate</th>
+                <th data-i18n="table.avg_latency">Avg Latency</th>
+              </tr>
+            </thead>
+            <tbody id="cdx-tools-perf-body">
+              <tr><td colspan="4" class="loading" data-i18n="empty.loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chart-container">
+        <h3>Tool Trends</h3>
+        <div id="cdx-tool-trends-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      </div>
+      <div class="chart-container">
+        <h3>Recent Failures</h3>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="table.timestamp">Timestamp</th>
+                <th data-i18n="table.tool">Tool</th>
+                <th>Error</th>
+                <th data-i18n="table.duration">Duration</th>
+              </tr>
+            </thead>
+            <tbody id="cdx-tools-failures-body">
+              <tr><td colspan="4" class="loading" data-i18n="empty.loading">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -519,10 +552,10 @@
 
     <div class="tabs" id="oc-tabs">
       <button class="tab active" data-octab="oc-overview">Overview</button>
+      <button class="tab" data-octab="oc-sessions" data-i18n="tab.cc_sessions">Sessions</button>
       <button class="tab" data-octab="oc-traces">Traces</button>
       <button class="tab" data-octab="oc-cost">Cost</button>
       <button class="tab" data-octab="oc-security" data-i18n="tab.oc_security">Security</button>
-      <button class="tab" data-octab="oc-search">Search</button>
     </div>
 
     <!-- OC Overview -->
@@ -597,6 +630,38 @@
         <div id="oc-metrics-quick-actions" class="me-quick-actions"></div>
         <div id="oc-metrics-chart-area"></div>
         <div id="oc-metrics-legend" class="me-legend"></div>
+      </div>
+    </div>
+
+    <!-- OC Sessions -->
+    <div class="tab-content" id="tab-oc-sessions">
+      <div class="filters">
+        <input class="filter-input" id="oc-session-filter" type="text"
+               placeholder="Filter by session key..." onkeydown="if(event.key==='Enter')oc_loadSessions()" />
+        <button class="filter-btn primary" onclick="oc_loadSessions()" data-i18n="btn.refresh">Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="table.session">Session</th>
+              <th data-i18n="table.channel">Channel</th>
+              <th>Messages</th>
+              <th data-i18n="table.tokens">Tokens</th>
+              <th data-i18n="table.cost">Cost</th>
+              <th data-i18n="table.duration">Duration</th>
+              <th>Errors</th>
+            </tr>
+          </thead>
+          <tbody id="oc-sessions-body">
+            <tr><td colspan="7" class="loading" data-i18n="empty.loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="filters" style="margin-top:12px;justify-content:flex-end">
+        <button class="filter-btn" id="oc-sessions-prev-btn" onclick="oc_prevSessionsPage()">Prev</button>
+        <span id="oc-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
+        <button class="filter-btn" id="oc-sessions-next-btn" onclick="oc_nextSessionsPage()">Next</button>
       </div>
     </div>
 
@@ -761,23 +826,15 @@
         <h3 data-i18n="section.channel_activity">Channel Activity (Message Velocity)</h3>
         <div id="oc-sec-channel-activity"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
-    </div>
 
-    <!-- OC Search -->
-    <div class="tab-content" id="tab-oc-search">
-      <div class="filters">
-        <input class="filter-input" id="oc-search-input" type="text"
-               placeholder="Search by model, channel, span..." onkeydown="if(event.key==='Enter')oc_doSearch()" />
-        <button class="filter-btn primary" onclick="oc_doSearch()" data-i18n="btn.search">Search</button>
-      </div>
-      <div class="search-results" id="oc-search-results"></div>
-      <div class="chart-container" style="margin-top:24px">
+      <div class="chart-container">
         <h3 data-i18n="section.anomaly_highlights">Anomaly Highlights</h3>
         <div class="anomaly-list" id="oc-anomaly-list">
           <div class="loading" data-i18n="empty.loading_anomalies">Loading anomalies...</div>
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- ========================= TRACES VIEW ========================= -->

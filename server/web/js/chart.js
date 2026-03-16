@@ -45,46 +45,62 @@ function makeUPlotOpts(title, series, width, yFormatter) {
 function renderChart(containerId, data, seriesDefs, yFmt) {
   var container = document.getElementById(containerId);
   container.innerHTML = '';
-  var baseWidth = container.clientWidth ||
-    container.parentElement?.clientWidth ||
-    container.closest('.chart-container')?.clientWidth ||
-    0;
-  var width = Math.max(baseWidth - 32, 320);
-  var tc = getThemeColors();
 
-  var timestamps = data.map(function(d) { return tsToMs(d.t) / 1000; });
-  var uData = [timestamps];
-  var uSeries = [{}];
+  function doRender() {
+    var baseWidth = container.clientWidth ||
+      container.parentElement?.clientWidth ||
+      container.closest('.chart-container')?.clientWidth ||
+      0;
+    var width = Math.max(baseWidth - 32, 320);
+    var tc = getThemeColors();
 
-  // Map named colors to theme colors
-  var colorMap = {
-    '#79c0ff': tc.blue,
-    '#f0883e': tc.orange,
-    '#3fb950': tc.green,
-    '#d2a8ff': tc.purple,
-    '#f85149': tc.red,
-  };
+    var timestamps = data.map(function(d) { return tsToMs(d.t) / 1000; });
+    var uData = [timestamps];
+    var uSeries = [{}];
 
-  seriesDefs.forEach(function(s) {
-    uData.push(data.map(function(d) { return d[s.key] != null ? Number(d[s.key]) : null; }));
-    var color = colorMap[s.color] || s.color;
-    uSeries.push({
-      label: s.label,
-      stroke: color,
-      width: 2,
-      fill: color + '1a',
+    var colorMap = {
+      '#79c0ff': tc.blue,
+      '#f0883e': tc.orange,
+      '#3fb950': tc.green,
+      '#d2a8ff': tc.purple,
+      '#f85149': tc.red,
+    };
+
+    seriesDefs.forEach(function(s) {
+      uData.push(data.map(function(d) { return d[s.key] != null ? Number(d[s.key]) : null; }));
+      var color = colorMap[s.color] || s.color;
+      uSeries.push({
+        label: s.label,
+        stroke: color,
+        width: 2,
+        fill: color + '1a',
+      });
     });
-  });
 
-  var opts = makeUPlotOpts('', uSeries, width, yFmt);
-  if (chartInstances[containerId]) {
-    chartInstances[containerId].destroy();
+    var opts = makeUPlotOpts('', uSeries, width, yFmt);
+    if (chartInstances[containerId]) {
+      chartInstances[containerId].destroy();
+    }
+    try {
+      chartInstances[containerId] = new uPlot(opts, uData, container);
+    } catch (err) {
+      console.error('chart render failed', containerId, err);
+      container.innerHTML = '<div class="chart-empty">Failed to render chart.</div>';
+    }
   }
-  try {
-    chartInstances[containerId] = new uPlot(opts, uData, container);
-  } catch (err) {
-    console.error('chart render failed', containerId, err);
-    container.innerHTML = '<div class="chart-empty">Failed to render chart.</div>';
+
+  // Wait for container to be laid out before measuring width.
+  // On tab/view switch the container may still be display:none.
+  if (container.clientWidth > 100) {
+    doRender();
+  } else {
+    var ro = new ResizeObserver(function() {
+      if (container.clientWidth > 100) {
+        ro.disconnect();
+        doRender();
+      }
+    });
+    ro.observe(container);
   }
 }
 

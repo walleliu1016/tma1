@@ -143,28 +143,70 @@ function cdx_focusPendingEvent() {
 }
 
 async function cdx_switchToEvent(tsEnc, callIdEnc) {
-  var targetTs = tsEnc || '';
   var targetCall = callIdEnc || '';
-  if (!targetTs) return;
+  var targetTs = tsEnc ? decodeURIComponent(tsEnc) : '';
+  if (!targetTs && !targetCall) return;
 
   document.querySelectorAll('#cdx-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('#view-codex .tab-content').forEach(function(t) { t.classList.remove('active'); });
-  var tabBtn = document.querySelector('[data-cdxtab="cdx-events"]');
+  var tabBtn = document.querySelector('[data-cdxtab="cdx-sessions"]');
   if (tabBtn) tabBtn.classList.add('active');
-  var tabEl = document.getElementById('tab-cdx-events');
+  var tabEl = document.getElementById('tab-cdx-sessions');
   if (tabEl) tabEl.classList.add('active');
-  var filter = document.getElementById('cdx-event-filter');
-  if (filter) filter.value = 'requests';
-  cdx_resetEventsPaging();
-  cdxPinnedEventTimestamp = targetTs;
-  cdxEventsPage = 0;
 
-  cdxPendingEventFocus = {
-    timestamp: targetTs,
-    callId: targetCall || '',
-  };
-  await cdx_loadEvents(false);
+  var filterInput = document.getElementById('cdx-session-filter');
+  if (filterInput) filterInput.value = targetCall || '';
+  cdxSessionsPage = 0;
+  await cdx_loadSessions();
   if (typeof updateHash === 'function') updateHash();
+
+  // Find the turn containing the target timestamp and expand it
+  if (!cdxSessionsData.length) return;
+  var targetMs = targetTs ? tsToMs(targetTs) : 0;
+  var matchIdx = -1;
+  if (targetCall) {
+    for (var i = 0; i < cdxSessionsData.length; i++) {
+      if (cdxSessionsData[i].turnId === targetCall) { matchIdx = i; break; }
+    }
+  }
+  if (matchIdx < 0 && targetMs) {
+    for (var j = 0; j < cdxSessionsData.length; j++) {
+      var g = cdxSessionsData[j];
+      var evts = g.events;
+      var first = tsToMs(evts[evts.length - 1]?.timestamp || g.timestamp);
+      var last = tsToMs(evts[0]?.timestamp || g.timestamp);
+      if (targetMs >= first && targetMs <= last) { matchIdx = j; break; }
+    }
+  }
+  if (matchIdx < 0) return; // target not found in loaded data; don't expand an unrelated turn
+
+  var page = Math.floor(matchIdx / cdxSessionsPageSize);
+  if (page !== cdxSessionsPage) { cdxSessionsPage = page; cdx_renderSessions(); }
+  var row = document.querySelector('#cdx-sessions-body tr:nth-child(' + (matchIdx - page * cdxSessionsPageSize + 1) + ')');
+  if (row) {
+    cdx_toggleSessionDetail(matchIdx, row);
+    if (targetMs) {
+      setTimeout(function() {
+        var detail = document.querySelector('.cdx-session-detail-row');
+        if (!detail) return;
+        var divs = detail.querySelectorAll('.clickable');
+        var best = null, bestDiff = Infinity;
+        divs.forEach(function(div) {
+          var spans = div.querySelectorAll('span');
+          for (var s = 0; s < spans.length; s++) {
+            var ts = Date.parse(spans[s].textContent);
+            if (!isNaN(ts)) { var diff = Math.abs(ts - targetMs); if (diff < bestDiff) { bestDiff = diff; best = div; } break; }
+          }
+        });
+        if (best) {
+          best.style.background = 'var(--bg-secondary)';
+          best.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    } else {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 }
 
 async function cdx_loadCards() {
@@ -216,8 +258,6 @@ async function cdx_loadOverview() {
     cdx_loadLatencyChart(),
     cdx_loadTurnStartupChart(),
     cdx_loadSpanDistribution(),
-    cdx_loadRequestOutcome(),
-    cdx_loadToolPerformance(),
     cdx_loadActivityHeatmap(),
     cdx_loadMetricsExplorer(),
   ]);
@@ -781,8 +821,429 @@ async function cdx_loadModelComparison() {
   } catch { /* ignore */ }
 }
 
+var cdxSessionsPage = 0;
+var cdxSessionsPageSize = 15;
+var cdxSessionsHasNext = false;
+var cdxSessionsData = [];
+
+function cdx_prevSessionsPage() {
+  if (cdxSessionsPage <= 0) return;
+  cdxSessionsPage--;
+  cdx_renderSessions();
+}
+
+function cdx_nextSessionsPage() {
+  if (!cdxSessionsHasNext) return;
+  cdxSessionsPage++;
+  cdx_renderSessions();
+}
+
+function cdx_updateSessionsPager(shownCount) {
+  var prevBtn = document.getElementById('cdx-sessions-prev-btn');
+  var nextBtn = document.getElementById('cdx-sessions-next-btn');
+  var info = document.getElementById('cdx-sessions-page-info');
+  if (!prevBtn || !nextBtn || !info) return;
+
+  var total = cdxSessionsData.length;
+  cdxSessionsHasNext = (cdxSessionsPage + 1) * cdxSessionsPageSize < total;
+  prevBtn.disabled = cdxSessionsPage <= 0;
+  nextBtn.disabled = !cdxSessionsHasNext;
+  if (!shownCount) {
+    info.textContent = 'No results';
+    return;
+  }
+  var start = cdxSessionsPage * cdxSessionsPageSize + 1;
+  var end = start + shownCount - 1;
+  info.textContent = 'Page ' + (cdxSessionsPage + 1) + ' \u00b7 ' + start + '-' + end + ' of ' + total;
+}
+
+async function cdx_loadSessions() {
+  var tbody = document.getElementById('cdx-sessions-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.loading') + '</td></tr>';
+  var filterText = (document.getElementById('cdx-session-filter')?.value || '').trim();
+
+  try {
+    await loadPricing();
+    var estCost = cdx_estimatedCostExpr();
+    // Only fetch meaningful events (api_request, tool_result, tool_decision).
+    // Excludes SSE streaming noise that has only duration_ms.
+    var meaningfulPred =
+      "(json_get_int(log_attributes, 'input_token_count') IS NOT NULL " +
+      "OR json_get_string(log_attributes, 'tool_name') IS NOT NULL " +
+      "OR json_get_string(log_attributes, 'decision') IS NOT NULL)";
+    var rowLimit = sessionQueryLimit();
+    var res = await query(
+      "SELECT timestamp, " +
+      "json_get_string(log_attributes, 'model') AS model, " +
+      "json_get_int(log_attributes, 'input_token_count') AS input_tok, " +
+      "json_get_int(log_attributes, 'output_token_count') AS output_tok, " +
+      "json_get_int(log_attributes, 'cached_token_count') AS cached_tok, " +
+      "json_get_float(log_attributes, 'duration_ms') AS duration_ms, " +
+      "json_get_string(log_attributes, 'tool_name') AS tool_name, " +
+      "json_get_string(log_attributes, 'success') AS success, " +
+      "json_get_string(log_attributes, 'call_id') AS call_id, " +
+      "json_get_string(log_attributes, 'decision') AS decision, " +
+      estCost + " AS est_cost, " +
+      "log_attributes " +
+      cdx_logsFromWhere() + " AND " + meaningfulPred + " " +
+      "ORDER BY timestamp DESC LIMIT " + rowLimit
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.no_events') + '</td></tr>';
+      cdx_updateSessionsPager(0);
+      return;
+    }
+
+    // Group by call_id; events without call_id use time-gap grouping
+    var groups = [];
+    var byCallId = {};
+    var noCallId = [];
+    data.forEach(function(d) {
+      if (d.call_id) {
+        if (!byCallId[d.call_id]) byCallId[d.call_id] = [];
+        byCallId[d.call_id].push(d);
+      } else {
+        noCallId.push(d);
+      }
+    });
+
+    // Build groups from call_id
+    Object.keys(byCallId).forEach(function(callId) {
+      var events = byCallId[callId];
+      var reqEvent = null;
+      var tools = 0;
+      var tokens = 0;
+      var cost = 0;
+      var isErr = false;
+      events.forEach(function(e) {
+        var typ = cdx_eventType(e);
+        if (typ === 'api_request') {
+          reqEvent = e;
+          tokens += (Number(e.input_tok) || 0) + (Number(e.output_tok) || 0);
+          cost += Number(e.est_cost) || 0;
+        }
+        if (e.tool_name) tools++;
+        if (e.success === 'false') isErr = true;
+      });
+      groups.push({
+        turnId: callId,
+        model: reqEvent?.model || events[0]?.model || '',
+        tokens: tokens,
+        tools: tools,
+        cost: cost,
+        durationMs: reqEvent?.duration_ms,
+        isErr: isErr,
+        timestamp: events[events.length - 1]?.timestamp || events[0]?.timestamp,
+        events: events,
+      });
+    });
+
+    // Time-gap grouping for events without call_id (30min gap = new session)
+    if (noCallId.length) {
+      var GAP_MS = 30 * 60 * 1000;
+      var current = null;
+      noCallId.forEach(function(d) {
+        var ts = tsToMs(d.timestamp);
+        if (!current || (current.lastTs - ts > GAP_MS)) {
+          current = { turnId: 'turn-' + (groups.length + 1), model: '', tokens: 0, tools: 0, cost: 0, durationMs: null, isErr: false, timestamp: d.timestamp, lastTs: ts, events: [] };
+          groups.push(current);
+        }
+        current.lastTs = ts;
+        current.events.push(d);
+        var typ = cdx_eventType(d);
+        if (typ === 'api_request') {
+          current.model = d.model || current.model;
+          current.tokens += (Number(d.input_tok) || 0) + (Number(d.output_tok) || 0);
+          current.cost += Number(d.est_cost) || 0;
+          if (d.duration_ms != null) current.durationMs = d.duration_ms;
+        }
+        if (d.tool_name) current.tools++;
+        if (d.success === 'false') current.isErr = true;
+      });
+    }
+
+    // Apply filter
+    groups = groups.filter(function(g) {
+      if (!filterText) return true;
+      return g.turnId.indexOf(filterText) >= 0 || (g.model || '').indexOf(filterText) >= 0;
+    });
+
+    // Sort by timestamp descending
+    groups.sort(function(a, b) { return tsToMs(b.timestamp) - tsToMs(a.timestamp); });
+    cdxSessionsData = groups;
+    cdxSessionsPage = 0;
+    cdx_renderSessions();
+
+    // Show truncation warning if the query hit its row limit
+    var warnEl = document.getElementById('cdx-sessions-truncation');
+    if (warnEl) warnEl.style.display = data.length >= rowLimit ? 'block' : 'none';
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Error: ' + escapeHTML(err.message) + '</td></tr>';
+    cdx_updateSessionsPager(0);
+  }
+}
+
+function cdx_renderSessions() {
+  var tbody = document.getElementById('cdx-sessions-body');
+  if (!tbody) return;
+  var start = cdxSessionsPage * cdxSessionsPageSize;
+  var page = cdxSessionsData.slice(start, start + cdxSessionsPageSize);
+
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.no_events') + '</td></tr>';
+    cdx_updateSessionsPager(0);
+    return;
+  }
+
+  tbody.innerHTML = page.map(function(g, i) {
+    var globalIdx = start + i;
+    var shortId = g.turnId.length > 16 ? g.turnId.substring(0, 16) + '\u2026' : g.turnId;
+    var tokText = g.tokens > 0 ? fmtNum(g.tokens) : '\u2014';
+    var badge = g.isErr ? 'badge-error' : 'badge-ok';
+    var label = g.isErr ? 'ERROR' : 'OK';
+    return '<tr class="clickable" onclick="cdx_toggleSessionDetail(' + globalIdx + ', this)" title="' + escapeHTML(g.turnId) + '">' +
+      '<td>' + escapeHTML(shortId) + '</td>' +
+      '<td>' + escapeHTML(g.model || '\u2014') + '</td>' +
+      '<td>' + tokText + '</td>' +
+      '<td>' + g.tools + '</td>' +
+      '<td>' + fmtCost(g.cost) + '</td>' +
+      '<td>' + fmtDurMs(g.durationMs) + '</td>' +
+      '<td><span class="badge ' + badge + '">' + label + '</span></td>' +
+      '</tr>';
+  }).join('');
+  cdx_updateSessionsPager(page.length);
+}
+
+function cdx_toggleSessionDetail(groupIdx, clickedRow) {
+  var prev = document.querySelector('.cdx-session-detail-row');
+  if (prev) {
+    var prevIdx = prev.dataset.idx;
+    prev.remove();
+    if (String(prevIdx) === String(groupIdx)) return;
+  }
+
+  var g = cdxSessionsData[groupIdx];
+  if (!g) return;
+  // Filter out SSE noise and sort chronologically
+  var events = g.events.filter(function(e) {
+    return cdx_eventType(e) !== 'sse_event' && cdx_eventType(e) !== 'event';
+  }).sort(function(a, b) { return tsToMs(a.timestamp) - tsToMs(b.timestamp); });
+
+  var timeline = events.map(function(e, ei) {
+    var typ = cdx_eventType(e);
+    var parts = [];
+    if (e.model) parts.push(e.model);
+    if (e.tool_name) parts.push(e.tool_name);
+    if (e.input_tok || e.output_tok) {
+      var tokDetail = fmtNum(Number(e.input_tok) || 0) + ' in / ' + fmtNum(Number(e.output_tok) || 0) + ' out';
+      if (e.cached_tok) tokDetail += ' / ' + fmtNum(e.cached_tok) + ' cached';
+      parts.push(tokDetail);
+    }
+    if (e.duration_ms != null) parts.push(fmtDurMs(e.duration_ms));
+    if (e.decision) parts.push('decision=' + e.decision);
+    if (e.success != null) parts.push(e.success === 'true' ? 'ok' : 'failed');
+    if (e.error) parts.push(e.error.length > 60 ? e.error.substring(0, 60) + '\u2026' : e.error);
+
+    var badgeClass = 'badge-ok';
+    if (e.success === 'false') badgeClass = 'badge-error';
+    else if (typ === 'tool_result') badgeClass = 'badge-tool';
+    else if (typ === 'api_request') badgeClass = 'badge-request';
+    else if (typ === 'tool_decision') badgeClass = '';
+
+    var rowId = 'cdx-sd-' + groupIdx + '-' + ei;
+    // Render raw attributes as expandable detail
+    var attrJson = '';
+    try {
+      var raw = typeof e.log_attributes === 'string' ? JSON.parse(e.log_attributes) : (e.log_attributes || {});
+      attrJson = JSON.stringify(deepParseAttrs(raw), null, 2);
+    } catch (_) {
+      attrJson = String(e.log_attributes || '{}');
+    }
+
+    return '<div class="clickable" style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)" ' +
+      'onclick="var d=document.getElementById(\x27' + rowId + '\x27);var v=d.style.display===\x27none\x27;d.style.display=v?\x27block\x27:\x27none\x27;this.querySelector(\x27.expand-arrow\x27).textContent=v?\x27\\u25BC\x27:\x27\\u25B6\x27">' +
+      '<span class="expand-arrow" style="color:var(--text-muted);font-size:10px;margin-right:4px;display:inline-block;width:10px">&#9654;</span>' +
+      '<span style="color:var(--text-secondary);margin-right:6px">' + escapeHTML(fmtTime(e.timestamp)) + '</span>' +
+      '<span class="badge ' + badgeClass + '" style="font-size:10px">' + escapeHTML(typ.toUpperCase()) + '</span> ' +
+      escapeHTML(parts.join(' \u00b7 ')) +
+      '</div>' +
+      '<pre id="' + rowId + '" style="display:none;font-size:11px;color:var(--text-muted);' +
+      'background:var(--bg-secondary);padding:8px;margin:0 0 4px;border-radius:4px;' +
+      'overflow-x:auto;white-space:pre-wrap;word-break:break-all">' +
+      escapeHTML(attrJson) + '</pre>';
+  }).join('');
+  if (!timeline) timeline = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No meaningful events in this turn.</div>';
+
+  var detailRow = document.createElement('tr');
+  detailRow.className = 'cdx-session-detail-row trace-detail-row';
+  detailRow.dataset.idx = groupIdx;
+  detailRow.innerHTML = '<td colspan="7"><div class="trace-detail-inner">' +
+    '<div class="detail-header"><h3>Turn: ' + escapeHTML(g.turnId) + '</h3>' +
+    '<button class="close-btn" onclick="this.closest(\'.cdx-session-detail-row\').remove()">&times;</button></div>' +
+    '<div style="margin-bottom:8px;font-size:13px">' +
+    events.length + ' events \u00b7 ' +
+    g.tools + ' tool calls \u00b7 ' +
+    fmtNum(g.tokens) + ' tokens \u00b7 ' +
+    fmtCost(g.cost) +
+    '</div>' +
+    '<div style="max-height:400px;overflow-y:auto">' + timeline + '</div>' +
+    '</div></td>';
+  clickedRow.after(detailRow);
+}
+
+// ===================================================================
+// Codex view — Tools tab
+// ===================================================================
+async function cdx_loadToolsTab() {
+  await Promise.all([
+    cdx_loadToolsTable(),
+    cdx_loadToolTrends(),
+    cdx_loadToolFailures(),
+  ]);
+}
+
+async function cdx_loadToolsTable() {
+  var tbody = document.getElementById('cdx-tools-perf-body');
+  if (!tbody) return;
+  try {
+    var res;
+    if (cdx_hasMetricTable('codex_tool_call_total') &&
+        cdx_hasMetricTable('codex_tool_call_duration_ms_milliseconds_sum') &&
+        cdx_hasMetricTable('codex_tool_call_duration_ms_milliseconds_count')) {
+      res = await query(
+        "SELECT totals.tool_name, totals.cnt, totals.ok_cnt, " +
+        "ROUND(durations.total_ms / NULLIF(duration_counts.cnt, 0), 2) AS avg_ms " +
+        "FROM (" +
+        "  SELECT tool AS tool_name, " +
+        "         SUM(greptime_value) AS cnt, " +
+        "         SUM(CASE WHEN success = 'true' THEN greptime_value ELSE 0 END) AS ok_cnt " +
+        "  " + cdx_metricsFromWhere('codex_tool_call_total') + " " +
+        "  GROUP BY tool" +
+        ") totals " +
+        "LEFT JOIN (" +
+        "  SELECT tool AS tool_name, SUM(greptime_value) AS total_ms " +
+        "  " + cdx_metricsFromWhere('codex_tool_call_duration_ms_milliseconds_sum') + " " +
+        "  GROUP BY tool" +
+        ") durations ON totals.tool_name = durations.tool_name " +
+        "LEFT JOIN (" +
+        "  SELECT tool AS tool_name, SUM(greptime_value) AS cnt " +
+        "  " + cdx_metricsFromWhere('codex_tool_call_duration_ms_milliseconds_count') + " " +
+        "  GROUP BY tool" +
+        ") duration_counts ON totals.tool_name = duration_counts.tool_name " +
+        "ORDER BY totals.cnt DESC LIMIT 15"
+      );
+    } else {
+      res = await query(
+        "SELECT json_get_string(log_attributes, 'tool_name') AS tool_name, " +
+        "COUNT(*) AS cnt, " +
+        "SUM(CASE WHEN json_get_string(log_attributes, 'success') = 'true' THEN 1 ELSE 0 END) AS ok_cnt, " +
+        "ROUND(AVG(json_get_float(log_attributes, 'duration_ms')), 2) AS avg_ms " +
+        cdx_logsFromWhere() + " " +
+        "AND json_get_string(log_attributes, 'tool_name') IS NOT NULL " +
+        "AND json_get_string(log_attributes, 'success') IS NOT NULL " +
+        "GROUP BY tool_name ORDER BY cnt DESC LIMIT 15"
+      );
+    }
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('empty.no_tool_data') + '</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(d) {
+      var cnt = Number(d.cnt) || 0;
+      var okCnt = Number(d.ok_cnt) || 0;
+      var rate = cnt > 0 ? (okCnt / cnt * 100).toFixed(1) + '%' : '0%';
+      return '<tr>' +
+        '<td>' + escapeHTML(d.tool_name || 'unknown') + '</td>' +
+        '<td>' + fmtNum(cnt) + '</td>' +
+        '<td>' + rate + '</td>' +
+        '<td>' + fmtDurMs(d.avg_ms) + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('error.load_tool_perf') + '</td></tr>';
+  }
+}
+
+async function cdx_loadToolTrends() {
+  try {
+    var bucket = currentTimeRange === '1h' ? '5 minutes' : (currentTimeRange === '7d' ? '1 hour' : '15 minutes');
+    var res = await query(
+      "SELECT date_bin('" + bucket + "'::INTERVAL, timestamp) AS t, " +
+      "json_get_string(log_attributes, 'tool_name') AS tool, " +
+      "COUNT(*) AS cnt " +
+      cdx_logsFromWhere() + " " +
+      "AND json_get_string(log_attributes, 'tool_name') IS NOT NULL " +
+      "AND json_get_string(log_attributes, 'success') IS NOT NULL " +
+      "GROUP BY t, tool ORDER BY t"
+    );
+    var raw = rowsToObjects(res);
+    if (!raw.length) return;
+
+    var toolTotals = {};
+    raw.forEach(function(r) {
+      toolTotals[r.tool] = (toolTotals[r.tool] || 0) + (Number(r.cnt) || 0);
+    });
+    var topTools = Object.keys(toolTotals).sort(function(a, b) { return toolTotals[b] - toolTotals[a]; }).slice(0, 6);
+
+    var timeMap = {};
+    raw.forEach(function(r) {
+      if (topTools.indexOf(r.tool) < 0) return;
+      if (!timeMap[r.t]) timeMap[r.t] = { t: r.t };
+      timeMap[r.t][r.tool] = Number(r.cnt) || 0;
+    });
+    var data = Object.values(timeMap).sort(function(a, b) { return String(a.t) < String(b.t) ? -1 : 1; });
+
+    var seriesDefs = topTools.map(function(tool, i) {
+      return { label: tool, key: tool, color: chartColors[i % chartColors.length] };
+    });
+    renderChart('cdx-tool-trends-chart', data, seriesDefs, function(v) { return fmtNum(v); });
+  } catch { /* no data */ }
+}
+
+async function cdx_loadToolFailures() {
+  var tbody = document.getElementById('cdx-tools-failures-body');
+  if (!tbody) return;
+  try {
+    var res = await query(
+      "SELECT timestamp, " +
+      "json_get_string(log_attributes, 'tool_name') AS tool, " +
+      "json_get_string(log_attributes, 'error') AS error, " +
+      "json_get_float(log_attributes, 'duration_ms') AS duration_ms, " +
+      "log_attributes " +
+      cdx_logsFromWhere() + " " +
+      "AND json_get_string(log_attributes, 'tool_name') IS NOT NULL " +
+      "AND json_get_string(log_attributes, 'success') = 'false' " +
+      "ORDER BY timestamp DESC LIMIT 20"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">No recent failures.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(d, i) {
+      var errText = d.error || 'unknown error';
+      if (errText.length > 80) errText = errText.substring(0, 80) + '\u2026';
+      var rowId = 'cdx-fail-' + i;
+      var attrJson = '';
+      try { var la = typeof d.log_attributes === 'string' ? JSON.parse(d.log_attributes) : (d.log_attributes || {}); attrJson = JSON.stringify(deepParseAttrs(la), null, 2); } catch { attrJson = String(d.log_attributes || ''); }
+      return '<tr class="clickable" onclick="var d=document.getElementById(\x27' + rowId + '\x27);var v=d.style.display===\x27none\x27;d.style.display=v?\x27table-row\x27:\x27none\x27;this.querySelector(\x27.expand-arrow\x27).textContent=v?\x27\\u25BC\x27:\x27\\u25B6\x27">' +
+        '<td><span class="expand-arrow" style="color:var(--text-muted);font-size:10px;margin-right:4px;display:inline-block;width:10px">&#9654;</span>' + fmtTime(d.timestamp) + '</td>' +
+        '<td>' + escapeHTML(d.tool || 'unknown') + '</td>' +
+        '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis" title="' + escapeHTML(d.error || '') + '">' + escapeHTML(errText) + '</td>' +
+        '<td>' + fmtDurMs(d.duration_ms) + '</td></tr>' +
+        '<tr id="' + rowId + '" style="display:none"><td colspan="4"><pre style="margin:0;padding:8px 12px;font-size:12px;background:var(--bg-secondary);border-radius:4px;white-space:pre-wrap;word-break:break-all">' + escapeHTML(attrJson) + '</pre></td></tr>';
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Failed to load failures.</td></tr>';
+  }
+}
+
 function cdx_onTabChange(tab) {
   if (tab === 'cdx-overview') cdx_loadOverview();
-  else if (tab === 'cdx-events') cdx_loadEvents();
+  else if (tab === 'cdx-sessions') cdx_loadSessions();
+  else if (tab === 'cdx-tools') cdx_loadToolsTab();
   else if (tab === 'cdx-cost') cdx_loadCostTab();
 }

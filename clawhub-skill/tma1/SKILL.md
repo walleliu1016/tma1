@@ -6,6 +6,8 @@ description: |
 
   Use when users say:
   - "install tma1"
+  - "upgrade tma1"
+  - "update tma1"
   - "setup observability"
   - "monitor my agent"
   - "how much am I spending on tokens"
@@ -316,9 +318,10 @@ Database config: ~/.tma1/config/standalone.toml
 Edit this file if you want to tune database resource usage, then restart `tma1-server`.
 Never sent to any cloud service.
 
-♻️ RESTART
-If TMA1 stops, run: tma1-server
-Or reinstall: curl -fsSL https://tma1.ai/install.sh | bash
+♻️ RESTART / UPGRADE
+Restart: tma1-server
+Upgrade to latest: curl -fsSL https://tma1.ai/install.sh | bash
+  (stops the running service, downloads the new binary, restarts — data is preserved)
 
 💡 For more queries, read: https://tma1.ai/REFERENCE.md
 ```
