@@ -121,9 +121,9 @@ func TestCheckVersionMismatch(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBuildDownloadURL(t *testing.T) {
-	url, err := buildDownloadURL("v0.12.0")
+	url, err := buildDownloadURL("v0.12.0", runtime.GOOS, runtime.GOARCH)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Skipf("skipping unsupported platform %s/%s: %v", runtime.GOOS, runtime.GOARCH, err)
 	}
 
 	wantOS := runtime.GOOS
@@ -133,6 +133,24 @@ func TestBuildDownloadURL(t *testing.T) {
 
 	if url != wantURL {
 		t.Errorf("got  %q\nwant %q", url, wantURL)
+	}
+}
+
+func TestBuildDownloadURLWindows(t *testing.T) {
+	url, err := buildDownloadURL("v0.12.0", "windows", "amd64")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := githubReleaseBase + "/download/v0.12.0/greptime-windows-amd64-v0.12.0.tar.gz"
+	if url != want {
+		t.Errorf("got  %q\nwant %q", url, want)
+	}
+}
+
+func TestBuildDownloadURLWindowsArm64Rejected(t *testing.T) {
+	_, err := buildDownloadURL("v0.12.0", "windows", "arm64")
+	if err == nil {
+		t.Fatal("expected error for windows/arm64")
 	}
 }
 
@@ -171,11 +189,11 @@ func TestExtractBinary(t *testing.T) {
 	t.Run("finds_greptime", func(t *testing.T) {
 		content := []byte("fake-binary-content")
 		archive := makeTarGz(t, map[string][]byte{
-			"some-dir/README.md": []byte("readme"),
-			"some-dir/greptime":  content,
+			"some-dir/README.md":                    []byte("readme"),
+			"some-dir/" + greptimeBinaryName(): content,
 		})
 
-		dest := filepath.Join(t.TempDir(), "greptime")
+		dest := filepath.Join(t.TempDir(), greptimeBinaryName())
 		if err := extractBinary(archive, dest); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -188,12 +206,15 @@ func TestExtractBinary(t *testing.T) {
 			t.Errorf("extracted content mismatch")
 		}
 
-		info, err := os.Stat(dest)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if info.Mode()&0111 == 0 {
-			t.Error("binary should be executable")
+		// Windows does not use POSIX mode bits; skip executability check there.
+		if runtime.GOOS != "windows" {
+			info, err := os.Stat(dest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode()&0111 == 0 {
+				t.Error("binary should be executable")
+			}
 		}
 	})
 
@@ -202,13 +223,14 @@ func TestExtractBinary(t *testing.T) {
 			"some-dir/other-binary": []byte("nope"),
 		})
 
-		dest := filepath.Join(t.TempDir(), "greptime")
+		dest := filepath.Join(t.TempDir(), greptimeBinaryName())
 		err := extractBinary(archive, dest)
 		if err == nil {
 			t.Fatal("expected error for missing greptime binary")
 		}
-		if got := err.Error(); got != "greptime binary not found in archive" {
-			t.Errorf("unexpected error: %v", err)
+		wantErr := greptimeBinaryName() + " binary not found in archive"
+		if got := err.Error(); got != wantErr {
+			t.Errorf("got %q, want %q", got, wantErr)
 		}
 	})
 }
