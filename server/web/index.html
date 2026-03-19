@@ -532,7 +532,7 @@
 
   <!-- ========================= OPENCLAW VIEW ========================= -->
   <div id="view-openclaw" style="display:none">
-    <div class="cards">
+    <div class="cards cards-5">
       <div class="card">
         <div class="label" data-i18n="card.total_cost">Total Cost</div>
         <div class="value cost" id="oc-val-cost">&mdash;</div>
@@ -548,6 +548,11 @@
       <div class="card">
         <div class="label" data-i18n="card.avg_latency">Avg Latency</div>
         <div class="value latency" id="oc-val-latency">&mdash;</div>
+      </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:center">
+        <div id="oc-health-indicator" class="health-indicator health-na">
+          <span class="health-dot"></span><span class="health-text">N/A</span>
+        </div>
       </div>
     </div>
 
@@ -572,6 +577,10 @@
       <div class="chart-container">
         <h3 data-i18n="section.oc_latency">Latency Over Time (p50 / p95)</h3>
         <div id="oc-chart-latency"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      </div>
+      <div class="chart-container">
+        <h3>Success Rate</h3>
+        <div id="oc-chart-success-rate"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
         <h3>Channel Distribution</h3>
@@ -840,7 +849,7 @@
 
   <!-- ========================= TRACES VIEW ========================= -->
   <div id="view-traces" style="display:none">
-  <div class="cards">
+  <div class="cards cards-5">
     <div class="card">
       <div class="label" data-i18n="card.cost">Today's Cost</div>
       <div class="value cost" id="val-cost">&mdash;</div>
@@ -856,6 +865,11 @@
     <div class="card">
       <div class="label" data-i18n="card.latency">Avg Latency</div>
       <div class="value latency" id="val-latency">&mdash;</div>
+    </div>
+    <div class="card" style="display:flex;align-items:center;justify-content:center">
+      <div id="health-indicator" class="health-indicator health-na">
+        <span class="health-dot"></span><span class="health-text">N/A</span>
+      </div>
     </div>
   </div>
 

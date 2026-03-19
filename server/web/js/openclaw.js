@@ -114,12 +114,40 @@ async function oc_loadCards() {
     document.getElementById('oc-val-requests').textContent = fmtNum(reqCount);
     var latVal = rows(results[3])?.[0]?.[0];
     document.getElementById('oc-val-latency').textContent = fmtDurMs(latVal);
+
+    // Health indicator (5-minute window)
+    oc_updateHealthIndicator(reqCount);
+
     return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = 'OpenClaw metrics error: ' + err.message;
     return false;
+  }
+}
+
+async function oc_updateHealthIndicator(reqCount) {
+  var el = document.getElementById('oc-health-indicator');
+  if (!el) return;
+  if (!reqCount) {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
+    return;
+  }
+  try {
+    var res = await query(
+      "SELECT COUNT(*) AS total, " +
+      "SUM(CASE WHEN span_status_code = 'STATUS_CODE_ERROR' THEN 1 ELSE 0 END) AS errors, " +
+      "ROUND(APPROX_PERCENTILE_CONT(duration_nano, 0.95) / 1000000.0, 0) AS p95_ms " +
+      "FROM opentelemetry_traces " +
+      "WHERE " + OC_MODEL_SPAN + " AND timestamp > NOW() - INTERVAL '5 minutes'"
+    );
+    var r = rowsToObjects(res)[0] || {};
+    setHealthFromData(el, r);
+  } catch {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
   }
 }
 
@@ -131,6 +159,7 @@ async function oc_loadOverview() {
     oc_loadTokenChart(),
     oc_loadCostChart(),
     oc_loadLatencyChart(),
+    oc_loadSuccessRateChart(),
     oc_loadChannelDistribution(),
     oc_loadCacheEfficiencyOverview(),
     oc_loadProviderDistribution(),
@@ -224,6 +253,24 @@ async function oc_loadLatencyChart() {
       { label: t('chart.p95'), key: 'p95_ms', color: '#d2a8ff' },
     ], function(v) { return fmtDurMs(v); });
   } catch { /* no data */ }
+}
+
+async function oc_loadSuccessRateChart() {
+  try {
+    var res = await query(
+      "SELECT date_bin('" + chartBucket() + "'::INTERVAL, greptime_timestamp) AS t, " +
+      "SUM(CASE WHEN openclaw_outcome = 'completed' THEN greptime_value ELSE 0 END) " +
+      "/ NULLIF(SUM(greptime_value), 0) * 100 AS rate " +
+      "FROM openclaw_message_processed_total " +
+      "WHERE greptime_timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
+      "GROUP BY t ORDER BY t"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) return;
+    renderChart('oc-chart-success-rate', data, [
+      { label: 'Success Rate %', key: 'rate', color: '#3fb950' },
+    ], function(v) { return Number(v).toFixed(1) + '%'; });
+  } catch { /* table may not exist */ }
 }
 
 async function oc_loadChannelDistribution() {

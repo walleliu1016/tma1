@@ -71,6 +71,9 @@ async function loadMetrics() {
     var latVal = rows(latRes)?.[0]?.[0];
     document.getElementById('val-latency').textContent = latVal != null ? fmtMs(latVal) : '\u2014';
 
+    // Health indicator (5-minute window)
+    updateHealthIndicator('health-indicator', reqCount);
+
     return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
@@ -78,6 +81,56 @@ async function loadMetrics() {
     banner.textContent = t('error.greptimedb') + err.message;
     return false;
   }
+}
+
+async function updateHealthIndicator(elementId, reqCount) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  if (!reqCount) {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
+    return;
+  }
+  try {
+    var res = await query(
+      "SELECT COUNT(*) AS total, " +
+      "SUM(CASE WHEN span_status_code = 'STATUS_CODE_ERROR' THEN 1 ELSE 0 END) AS errors, " +
+      "ROUND(APPROX_PERCENTILE_CONT(duration_nano, 0.95) / 1000000.0, 0) AS p95_ms " +
+      "FROM opentelemetry_traces " +
+      "WHERE \"span_attributes.gen_ai.system\" IS NOT NULL " +
+      "AND timestamp > NOW() - INTERVAL '5 minutes'"
+    );
+    var r = rowsToObjects(res)[0] || {};
+    setHealthFromData(el, r);
+  } catch {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
+  }
+}
+
+function setHealthFromData(el, data) {
+  var total = Number(data.total) || 0;
+  var errors = Number(data.errors) || 0;
+  var p95 = Number(data.p95_ms) || 0;
+  var errRate = total > 0 ? (errors / total * 100) : 0;
+
+  var level, label;
+  if (total === 0) {
+    level = 'na'; label = 'N/A';
+  } else if (errRate > 5 || p95 > 5000) {
+    level = 'red'; label = 'Unhealthy';
+  } else if (errRate > 1 || p95 > 2000) {
+    level = 'yellow'; label = 'Degraded';
+  } else {
+    level = 'green'; label = 'Healthy';
+  }
+
+  var detail = total > 0
+    ? ' (err ' + errRate.toFixed(1) + '%, p95 ' + fmtDurMs(p95) + ')'
+    : '';
+  el.className = 'health-indicator health-' + level;
+  el.innerHTML = '<span class="health-dot"></span><span class="health-text">' +
+    escapeHTML(label + detail) + '</span>';
 }
 
 // ===================================================================
@@ -271,8 +324,15 @@ function toggleTraceDetail(clickedRow, traceId) {
     '<div class="trace-meta" id="trace-meta"></div>' +
     '<div class="waterfall-section"><h4>' + t('detail.span_waterfall') + '</h4>' +
     '<div id="span-waterfall" class="loading">' + t('empty.loading') + '</div></div>' +
-    '<div class="conversation-section"><h4>' + t('detail.conversation') + '</h4>' +
-    '<div id="conversation-messages" class="loading">' + t('empty.loading') + '</div>' +
+    '<div class="conversation-section">' +
+    '<div class="conv-tabs">' +
+    '<button class="conv-tab active" onclick="switchConvTab(this, \x27conv\x27)">' + t('detail.conversation') + '</button>' +
+    '<button class="conv-tab" onclick="switchConvTab(this, \x27rawlogs\x27)">Raw Logs</button>' +
+    '</div>' +
+    '<div id="conv-tab-conv" class="conv-tab-content active">' +
+    '<div id="conversation-messages" class="loading">' + t('empty.loading') + '</div></div>' +
+    '<div id="conv-tab-rawlogs" class="conv-tab-content">' +
+    '<div id="raw-logs-content" class="loading">' + t('empty.loading') + '</div></div>' +
     '</div></div></td>';
   clickedRow.after(detailRow);
 
@@ -350,6 +410,27 @@ async function loadTraceDetailData(traceId) {
   }
 }
 
+// Infer span type from span data for badge display
+function inferSpanType(s) {
+  var n = s.span_name || '';
+  if (n === 'openclaw.model.usage') return 'llm';
+  if (n.indexOf('openclaw.message.') === 0) return 'msg';
+  if (n.indexOf('openclaw.webhook.') === 0) return 'webhook';
+  if (n === 'openclaw.session.stuck') return 'session';
+  if (n.indexOf('sessions_spawn') >= 0) return 'spawn';
+  if (n.indexOf('subagent') >= 0) return 'subagent';
+  if (n.indexOf('tool_result') >= 0 || n.indexOf('tool_call') >= 0 ||
+      n === 'Bash' || n === 'Execute') return 'tool';
+  // GenAI fallback: span with model + token data is likely LLM call
+  if (s.model && (s.input_tok || s.output_tok)) return 'llm';
+  return '';
+}
+
+var SPAN_BADGE_LABELS = {
+  llm: 'llm', msg: 'msg', webhook: 'webhook', session: 'session',
+  spawn: 'spawn', subagent: 'subagent', tool: 'tool',
+};
+
 function renderWaterfall(container, spans) {
   var times = spans.map(function(s) { return new Date(s.timestamp).getTime(); });
   var durations = spans.map(function(s) { return Number(s.duration_nano) || 0; });
@@ -381,26 +462,59 @@ function renderWaterfall(container, spans) {
   }
   roots.forEach(function(r) { dfs(r, 0); });
 
-  // Render rows
-  var labelWidth = 220;
+  // Compute span type counts for summary
+  var typeCounts = {};
+  flat.forEach(function(item) {
+    var st = inferSpanType(item.span);
+    if (st) typeCounts[st] = (typeCounts[st] || 0) + 1;
+  });
+
+  // Render
+  var labelWidth = 260;
   container.innerHTML = '';
   container.className = 'waterfall';
-  flat.forEach(function(item) {
+
+  // Type summary bar (if any types detected)
+  var typeKeys = Object.keys(typeCounts);
+  if (typeKeys.length > 0) {
+    var summary = document.createElement('div');
+    summary.className = 'waterfall-type-summary';
+    summary.innerHTML = typeKeys.map(function(k) {
+      return '<span class="span-badge span-badge-' + k + '">' +
+        escapeHTML(SPAN_BADGE_LABELS[k] || k) + ' ' + typeCounts[k] + '</span>';
+    }).join(' ');
+    container.appendChild(summary);
+  }
+
+  flat.forEach(function(item, fi) {
     var s = item.span;
     var startMs = new Date(s.timestamp).getTime() - traceStart;
     var durMs = (Number(s.duration_nano) || 0) / 1e6;
     var leftPct = (startMs / totalMs * 100).toFixed(2);
     var widthPct = Math.max(durMs / totalMs * 100, 0.5).toFixed(2);
     var indent = item.depth * 16;
-    var barClass = s.status === 'STATUS_CODE_ERROR' ? 'error' : 'ok';
+    var barClass = (s.status === 'STATUS_CODE_ERROR' || s.span_status_code === 'STATUS_CODE_ERROR') ? 'error' : 'ok';
     var name = s.span_name || s.model || 'span';
 
+    // Span type badge
+    var spanType = inferSpanType(s);
+    var badgeHtml = spanType
+      ? '<span class="span-badge span-badge-' + spanType + '">' + escapeHTML(SPAN_BADGE_LABELS[spanType]) + '</span> '
+      : '';
+
+    // Token inline display
+    var tokenHtml = '';
+    if (s.input_tok || s.output_tok) {
+      tokenHtml = ' <span class="span-tokens">' +
+        fmtNum(s.input_tok || 0) + '\u2192' + fmtNum(s.output_tok || 0) + '</span>';
+    }
+
     var row = document.createElement('div');
-    row.className = 'waterfall-row';
+    row.className = 'waterfall-row waterfall-row-clickable';
     row.innerHTML =
       '<div class="waterfall-label" style="width:' + labelWidth + 'px;padding-left:' + indent + 'px" title="' + escapeHTML(name) + '">' +
         (item.depth > 0 ? '<span style="color:var(--text-dim);margin-right:4px">\u2514</span>' : '') +
-        escapeHTML(name) +
+        badgeHtml + escapeHTML(name) + tokenHtml +
       '</div>' +
       '<div class="waterfall-track">' +
         '<div class="waterfall-bar ' + barClass + '" style="left:' + leftPct + '%;width:' + widthPct + '%">' +
@@ -408,6 +522,45 @@ function renderWaterfall(container, spans) {
         '</div>' +
       '</div>' +
       '<div class="waterfall-dur">' + fmtDurMs(durMs) + '</div>';
+
+    // Click to expand span detail
+    (function(spanData, rowEl) {
+      rowEl.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var existing = rowEl.nextElementSibling;
+        if (existing && existing.classList.contains('waterfall-span-detail')) {
+          existing.remove();
+          return;
+        }
+        // Remove any other open detail
+        container.querySelectorAll('.waterfall-span-detail').forEach(function(d) { d.remove(); });
+
+        var detail = document.createElement('div');
+        detail.className = 'waterfall-span-detail';
+        var pairs = [];
+        pairs.push(['span_name', spanData.span_name]);
+        if (spanData.span_id) pairs.push(['span_id', spanData.span_id]);
+        if (spanData.parent_span_id) pairs.push(['parent_span_id', spanData.parent_span_id]);
+        pairs.push(['status', spanData.status || spanData.span_status_code || 'OK']);
+        if (spanData.model) pairs.push(['model', spanData.model]);
+        if (spanData.channel) pairs.push(['channel', spanData.channel]);
+        if (spanData.provider) pairs.push(['provider', spanData.provider]);
+        if (spanData.outcome) pairs.push(['outcome', spanData.outcome]);
+        if (spanData.session_key) pairs.push(['session_key', spanData.session_key]);
+        if (spanData.message_id) pairs.push(['message_id', spanData.message_id]);
+        if (spanData.input_tok) pairs.push(['input_tokens', spanData.input_tok]);
+        if (spanData.output_tok) pairs.push(['output_tokens', spanData.output_tok]);
+        if (spanData.cache_read) pairs.push(['cache_read', spanData.cache_read]);
+        if (spanData.cache_write) pairs.push(['cache_write', spanData.cache_write]);
+        if (spanData.total_tok) pairs.push(['total_tokens', spanData.total_tok]);
+        if (spanData.duration_nano) pairs.push(['duration_ms', (Number(spanData.duration_nano) / 1e6).toFixed(1)]);
+        pairs.push(['timestamp', spanData.timestamp]);
+        var json = '{\n' + pairs.map(function(p) { return '  "' + p[0] + '": ' + JSON.stringify(p[1]); }).join(',\n') + '\n}';
+        detail.innerHTML = '<pre class="waterfall-span-json">' + escapeHTML(json) + '</pre>';
+        rowEl.after(detail);
+      });
+    })(s, row);
+
     container.appendChild(row);
   });
 }
@@ -422,6 +575,58 @@ function closeTraceDetail() {
   var parent = document.querySelector('tr.active-trace');
   if (parent) parent.classList.remove('active-trace');
   if (row) row.remove();
+}
+
+function switchConvTab(btn, tabName) {
+  var section = btn.closest('.conversation-section');
+  section.querySelectorAll('.conv-tab').forEach(function(t) { t.classList.remove('active'); });
+  section.querySelectorAll('.conv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  var target = section.querySelector('#conv-tab-' + tabName);
+  if (target) target.classList.add('active');
+
+  // Lazy-load raw logs on first click
+  if (tabName === 'rawlogs') {
+    var el = section.querySelector('#raw-logs-content');
+    if (el && el.classList.contains('loading')) {
+      var detailRow = section.closest('.trace-detail-row');
+      if (detailRow && detailRow.dataset.traceId) {
+        loadRawLogs(detailRow.dataset.traceId, el);
+      }
+    }
+  }
+}
+
+async function loadRawLogs(traceId, el) {
+  try {
+    var tid = escapeSQLString(traceId);
+    var res = await query(
+      "SELECT timestamp, scope_name, body " +
+      "FROM opentelemetry_logs " +
+      "WHERE trace_id = '" + tid + "' ORDER BY timestamp LIMIT 200"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) {
+      el.innerHTML = '<div class="loading">No raw logs found for this trace.</div>';
+      el.classList.remove('loading');
+      return;
+    }
+    el.classList.remove('loading');
+    el.innerHTML = '<div class="raw-logs-list">' + data.map(function(d) {
+      var bodyPreview = (d.body || '').substring(0, 500);
+      if ((d.body || '').length > 500) bodyPreview += '...';
+      return '<div class="raw-log-entry">' +
+        '<div class="raw-log-meta">' +
+        '<span class="raw-log-ts">' + fmtTime(d.timestamp) + '</span>' +
+        (d.scope_name ? '<span class="badge badge-info">' + escapeHTML(d.scope_name) + '</span>' : '') +
+        '</div>' +
+        '<pre class="raw-log-body">' + escapeHTML(bodyPreview) + '</pre>' +
+        '</div>';
+    }).join('') + '</div>';
+  } catch {
+    el.innerHTML = '<div class="loading">Could not load raw logs.</div>';
+    el.classList.remove('loading');
+  }
 }
 
 // Parse conversation messages from log body rows, deduplicating cumulative re-sends.
