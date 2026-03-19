@@ -1,5 +1,5 @@
 // openclaw.js — OpenClaw view: all oc_* functions
-// Depends on: core.js, chart.js, i18n.js, metrics-explorer.js, traces.js (renderWaterfall)
+// Depends on: core.js (setHealthFromData), chart.js, i18n.js, metrics-explorer.js, traces.js (renderWaterfall)
 
 // OpenClaw span filters
 var OC_MODEL_SPAN = "span_name = 'openclaw.model.usage'";
@@ -48,12 +48,12 @@ function oc_updateTracePager(resultCount) {
   prevBtn.disabled = ocTracePage <= 0;
   nextBtn.disabled = !ocTraceHasNext;
   if (!resultCount) {
-    info.textContent = 'No results';
+    info.textContent = t('pager.no_results');
     return;
   }
   var start = ocTracePage * ocTracePageSize + 1;
   var end = start + resultCount - 1;
-  info.textContent = 'Page ' + (ocTracePage + 1) + ' · ' + start + '-' + end;
+  info.textContent = t('pager.page') + ' ' + (ocTracePage + 1) + ' \u00b7 ' + start + '-' + end;
 }
 
 async function oc_getTraceColumns() {
@@ -114,12 +114,40 @@ async function oc_loadCards() {
     document.getElementById('oc-val-requests').textContent = fmtNum(reqCount);
     var latVal = rows(results[3])?.[0]?.[0];
     document.getElementById('oc-val-latency').textContent = fmtDurMs(latVal);
+
+    // Health indicator (5-minute window)
+    oc_updateHealthIndicator(reqCount);
+
     return reqCount > 0;
   } catch (err) {
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
     banner.textContent = 'OpenClaw metrics error: ' + err.message;
     return false;
+  }
+}
+
+async function oc_updateHealthIndicator(reqCount) {
+  var el = document.getElementById('oc-health-indicator');
+  if (!el) return;
+  if (!reqCount) {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
+    return;
+  }
+  try {
+    var res = await query(
+      "SELECT COUNT(*) AS total, " +
+      "SUM(CASE WHEN span_status_code = 'STATUS_CODE_ERROR' THEN 1 ELSE 0 END) AS errors, " +
+      "ROUND(APPROX_PERCENTILE_CONT(duration_nano, 0.95) / 1000000.0, 0) AS p95_ms " +
+      "FROM opentelemetry_traces " +
+      "WHERE " + OC_MODEL_SPAN + " AND timestamp > NOW() - INTERVAL '5 minutes'"
+    );
+    var r = rowsToObjects(res)[0] || {};
+    setHealthFromData(el, r);
+  } catch {
+    el.className = 'health-indicator health-na';
+    el.innerHTML = '<span class="health-dot"></span><span class="health-text">N/A</span>';
   }
 }
 
@@ -131,6 +159,7 @@ async function oc_loadOverview() {
     oc_loadTokenChart(),
     oc_loadCostChart(),
     oc_loadLatencyChart(),
+    oc_loadSuccessRateChart(),
     oc_loadChannelDistribution(),
     oc_loadCacheEfficiencyOverview(),
     oc_loadProviderDistribution(),
@@ -224,6 +253,24 @@ async function oc_loadLatencyChart() {
       { label: t('chart.p95'), key: 'p95_ms', color: '#d2a8ff' },
     ], function(v) { return fmtDurMs(v); });
   } catch { /* no data */ }
+}
+
+async function oc_loadSuccessRateChart() {
+  try {
+    var res = await query(
+      "SELECT date_bin('" + chartBucket() + "'::INTERVAL, greptime_timestamp) AS t, " +
+      "SUM(CASE WHEN openclaw_outcome = 'completed' THEN greptime_value ELSE 0 END) " +
+      "/ NULLIF(SUM(greptime_value), 0) * 100 AS rate " +
+      "FROM openclaw_message_processed_total " +
+      "WHERE greptime_timestamp > NOW() - INTERVAL '" + intervalSQL() + "' " +
+      "GROUP BY t ORDER BY t"
+    );
+    var data = rowsToObjects(res);
+    if (!data.length) return;
+    renderChart('oc-chart-success-rate', data, [
+      { label: 'Success Rate %', key: 'rate', color: '#3fb950' },
+    ], function(v) { return Number(v).toFixed(1) + '%'; });
+  } catch { /* table may not exist */ }
 }
 
 async function oc_loadChannelDistribution() {
@@ -480,10 +527,10 @@ function oc_updateSessionsPager(resultCount) {
   if (!prevBtn || !nextBtn || !info) return;
   prevBtn.disabled = ocSessionsPage <= 0;
   nextBtn.disabled = !ocSessionsHasNext;
-  if (!resultCount) { info.textContent = 'No results'; return; }
+  if (!resultCount) { info.textContent = t('pager.no_results'); return; }
   var start = ocSessionsPage * ocSessionsPageSize + 1;
   var end = start + resultCount - 1;
-  info.textContent = 'Page ' + (ocSessionsPage + 1) + ' \u00b7 ' + start + '-' + end;
+  info.textContent = t('pager.page') + ' ' + (ocSessionsPage + 1) + ' \u00b7 ' + start + '-' + end;
 }
 
 async function oc_loadSessions() {
@@ -785,7 +832,7 @@ async function oc_toggleSessionDetail(clickedRow, idx) {
     if (hasSessionKey) {
       html += '<div style="margin-top:8px">' +
         '<button class="filter-btn primary" onclick="oc_filterBySession(\'' + escapeJSString(session.session_key) + '\')">' +
-        'View in Traces tab</button></div>';
+        t('ui.view_in_traces') + '</button></div>';
     }
 
     inner.innerHTML = html;
@@ -1288,16 +1335,16 @@ async function oc_loadAnomalies() {
       var reason;
       var severity = '';
       if (d.span_name === 'openclaw.webhook.error') {
-        reason = 'Webhook Error';
+        reason = t('anomaly.webhook_error');
         severity = 'badge-error';
       } else if (d.span_name === 'openclaw.session.stuck') {
-        reason = 'Session Stuck';
+        reason = t('anomaly.session_stuck');
         severity = 'badge-error';
       } else if (d.span_status_code === 'STATUS_CODE_ERROR') {
-        reason = 'Span Error (' + oc_shortSpanName(d.span_name) + ')';
+        reason = t('anomaly.span_error') + ' (' + oc_shortSpanName(d.span_name) + ')';
         severity = 'badge-error';
       } else if (d.outcome && d.outcome !== 'completed') {
-        reason = 'Outcome: ' + d.outcome;
+        reason = t('anomaly.outcome') + ': ' + d.outcome;
         severity = 'warn';
       } else {
         reason = t('anomaly.high_token');
@@ -1471,7 +1518,7 @@ async function oc_loadWebhookTimeline() {
     if (!data.length) { el.innerHTML = '<div class="chart-empty">' + t('empty.no_webhook_errors') + '</div>'; return; }
     el.innerHTML = data.map(function(d) {
       return '<div class="anomaly-item badge-error" onclick="oc_switchToTrace(\'' + escapeJSString(d.trace_id) + '\')">' +
-        '<div class="anomaly-reason">Webhook Error</div>' +
+        '<div class="anomaly-reason">' + t('anomaly.webhook_error') + '</div>' +
         '<div style="font-size:13px">' +
         (d.channel ? escapeHTML(d.channel) + ' &middot; ' : '') +
         (d.session_key ? 'session: ' + escapeHTML(d.session_key) + ' &middot; ' : '') +
