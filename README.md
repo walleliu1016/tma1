@@ -3,7 +3,7 @@
 > *"Your agent runs. TMA1 remembers."*
 
 Local-first observability for AI agents.
-Track token usage, cost, latency, errors, and security signals across your AI agents.
+Track token usage, cost, latency, errors, and security signals across your AI agents — all on your machine.
 No cloud account, no Docker, no Grafana setup.
 
 Named after TMA-1 (Tycho Magnetic Anomaly-1) from *2001: A Space Odyssey*:
@@ -11,13 +11,25 @@ the monolith buried on the moon, silently recording everything until you dig it 
 
 ## What You Get
 
-- **Cost breakdown**: token counts and estimated cost per model, with burn-rate projections and cache efficiency
-- **Latency tracking**: p50/p95 percentiles per model, tool performance tables
-- **Security monitoring**: shell command detection, prompt injection alerts, webhook error tracking
-- **Conversation replay**: inspect prompts and responses (where supported, e.g. Claude Code)
-- **Anomaly detection**: flags unusual token counts, high error rates, or slow responses
-- **Full-text search**: search across all recorded events and traces
-- **SQL access**: query raw events directly via MySQL protocol or built-in query UI
+Four dedicated dashboard views, one per agent type:
+
+| View | Tabs | Data Source |
+|------|------|-------------|
+| **Claude Code** | Overview, Sessions, Tools, Cost, Search | OTel metrics + logs |
+| **Codex** | Overview, Sessions, Tools, Cost | OTel logs + metrics |
+| **OpenClaw** | Overview, Sessions, Traces, Cost, Security | OTel traces + metrics |
+| **OTel GenAI** | Overview, Traces, Cost, Security, Search | OTel traces (gen_ai semantic conventions) |
+
+Every view includes:
+- **Token & cost cards** with burn-rate projections and cache efficiency
+- **Latency tracking** with p50/p95 percentiles per model
+- **Activity heatmap** showing usage patterns over time
+- **Metrics Explorer** for ad-hoc PromQL queries on raw OTel metrics
+- **Anomaly detection** flagging unusual token counts, high error rates, or slow responses
+- **Full-text search** across recorded events and traces (where applicable)
+- **SQL access** via MySQL protocol (port 14002) or the built-in query API
+
+Security tab (OpenClaw & OTel GenAI) adds shell command detection, prompt injection alerts, and webhook error tracking.
 
 ## Quick Install
 
@@ -83,63 +95,71 @@ your-agent
 open http://localhost:14318
 ```
 
-## Supported Sources
-
-- **Claude Code**: OTel metrics + logs
-- **Codex**: OTel logs + traces, plus native metrics when `otel.metrics_exporter` is enabled
-- **OpenClaw**: OTel traces + metrics
-- **Any OTel-compatible GenAI app**: traces with `gen_ai.*` attributes
-
-Codex uses separate OTLP exporters per signal. In practice, configure logs, traces,
-and metrics with their own direct endpoints rather than a single `/v1/otlp` base URL.
-
-Send OTLP to:
-
-```text
-http://localhost:14318/v1/otlp
-```
-
-Or direct signal endpoints (also supported):
-
-```text
-http://localhost:14318/v1/logs
-http://localhost:14318/v1/traces
-http://localhost:14318/v1/metrics
-```
-
 ## How It Works
 
-1. Your agent sends OTLP data to `tma1-server`.
-2. TMA1 stores and aggregates data locally.
-3. Dashboard is served from the same process on `http://localhost:14318`.
-4. You can query data via SQL.
+```
+Agent (Claude Code / Codex / OpenClaw / any GenAI app)
+    │  OTLP/HTTP
+    ▼
+tma1-server  (port 14318)
+    │  receives + stores OTel data
+    │  derives per-minute aggregations
+    │  serves dashboard UI
+    ▼
+Browser dashboard (embedded in the binary)
+```
 
-Implementation detail: TMA1 uses an embedded local GreptimeDB process managed by `tma1-server`.
+One process, one binary. On first start TMA1 sets up its data directory at `~/.tma1/` and is ready to receive data. All data stays on your machine.
+
+## OTLP Endpoints
+
+Agents send OTLP data to tma1-server:
+
+```text
+http://localhost:14318/v1/otlp          # Wildcard OTLP (recommended)
+http://localhost:14318/v1/traces        # Direct signal: traces
+http://localhost:14318/v1/metrics       # Direct signal: metrics
+http://localhost:14318/v1/logs          # Direct signal: logs
+```
+
+Codex requires separate per-signal endpoints; other agents can use the single `/v1/otlp` base.
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Liveness check |
+| `/status` | GET | Backend reachability |
+| `/api/query` | POST | SQL proxy (`{"sql": "SELECT ..."}`) |
+| `/api/prom/*` | GET/POST | Prometheus API proxy (PromQL) |
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TMA1_HOST` | `127.0.0.1` | Address tma1-server binds to |
-| `TMA1_PORT` | `14318` | HTTP port for tma1-server dashboard |
+| `TMA1_PORT` | `14318` | HTTP port for tma1-server |
 | `TMA1_DATA_DIR` | `~/.tma1` | Local data and binary directory |
 | `TMA1_GREPTIMEDB_VERSION` | `latest` | GreptimeDB version to download |
-| `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | Embedded database HTTP API + OTLP port |
+| `TMA1_GREPTIMEDB_HTTP_PORT` | `14000` | GreptimeDB HTTP API + OTLP port |
 | `TMA1_GREPTIMEDB_GRPC_PORT` | `14001` | GreptimeDB gRPC port |
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
-| `TMA1_DATA_TTL` | `15d` | Default TTL for auto-created tables |
-
-On first start, TMA1 writes a default GreptimeDB config to `~/.tma1/config/standalone.toml`, then starts GreptimeDB with `-c`. The default keeps `http`, `mysql`, and Prometheus Remote Storage enabled, disables Postgres, InfluxDB, OpenTSDB, and Jaeger, and applies conservative local resource limits.
+| `TMA1_DATA_TTL` | `60d` | Default TTL for auto-created tables |
 
 ## Development
 
 ```bash
-make build           # Build the binary
-make build-windows   # Cross-compile for Windows
+make build           # Build the binary → server/bin/tma1-server
+make build-linux     # Cross-compile for Linux amd64
+make build-windows   # Cross-compile for Windows amd64
 make vet             # Run go vet
+make lint            # Run golangci-lint (requires golangci-lint v2)
+make lint-js         # Run ESLint on dashboard JS (requires Node.js)
 make test            # Run tests with race detector
+make clean           # Remove built binaries
 make run             # Build and run locally
+make dev             # Watch mode: rebuild + restart on file changes (requires fswatch)
 ```
 
 ## License
