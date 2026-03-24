@@ -1095,9 +1095,9 @@ function cdx_toggleSessionDetail(groupIdx, clickedRow) {
     '<div class="detail-header"><h3>' + t('table.turn') + ': ' + escapeHTML(g.turnId) + '</h3>' +
     '<button class="close-btn" onclick="this.closest(\'.cdx-session-detail-row\').remove()">&times;</button></div>' +
     '<div style="margin-bottom:8px;font-size:13px">' +
-    events.length + ' ' + t('table.event') + ' \u00b7 ' +
-    g.tools + ' ' + t('table.calls') + ' \u00b7 ' +
-    fmtNum(g.tokens) + ' ' + t('table.tokens') + ' \u00b7 ' +
+    events.length + ' ' + t('ui.events') + ' \u00b7 ' +
+    g.tools + ' ' + t('ui.tool_calls') + ' \u00b7 ' +
+    fmtNum(g.tokens) + ' ' + t('ui.tokens') + ' \u00b7 ' +
     fmtCost(g.cost) +
     '</div>' +
     '<div style="max-height:400px;overflow-y:auto">' + timeline + '</div>' +

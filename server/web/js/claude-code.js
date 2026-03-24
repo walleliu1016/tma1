@@ -664,10 +664,10 @@ async function cc_loadPromptTraces() {
         '<div class="anomaly-reason">' + escapeHTML(g.promptId) + '</div>' +
         '<div style="font-size:13px">' +
         fmtTime(g.latestTs) + ' · ' +
-        fmtNum(g.events.length) + ' ' + t('table.event') + ' · ' +
-        fmtNum(g.reqs) + ' ' + t('table.requests') + ' · ' +
+        fmtNum(g.events.length) + ' ' + t('ui.events') + ' · ' +
+        fmtNum(g.reqs) + ' ' + t('ui.requests') + ' · ' +
         fmtCost(g.cost) + ' · ' +
-        g.errors + ' ' + t('table.errors') +
+        g.errors + ' ' + t('ui.errors') +
         (models.length ? ' · ' + escapeHTML(models.slice(0, 3).join(', ')) : '') +
         '</div>' +
         '<div class="cc-prompt-detail" style="display:none;margin-top:8px">' + timeline + '</div>' +

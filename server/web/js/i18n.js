@@ -235,6 +235,7 @@ var I18N = {
     'tab.cdx_cost': 'Cost',
     // Tabs — OpenClaw
     'tab.oc_overview': 'Overview',
+    'tab.oc_sessions': 'Sessions',
     'tab.oc_traces': 'Traces',
     'tab.oc_cost': 'Cost',
     // Sections — Codex / OpenClaw
@@ -335,6 +336,11 @@ var I18N = {
     'ui.yes': 'YES',
     'ui.unknown': 'unknown',
     'ui.per_hour': '/hr',
+    'ui.events': 'events',
+    'ui.requests': 'requests',
+    'ui.errors': 'errors',
+    'ui.tool_calls': 'tool calls',
+    'ui.tokens': 'tokens',
   },
   zh: {
     'header.tagline': '\u4f60\u7684 Agent \u5728\u8fd0\u884c\uff0cTMA1 \u5728\u8bb0\u5f55\u3002',
@@ -541,6 +547,7 @@ var I18N = {
     'tab.cdx_tools': '工具',
     'tab.cdx_cost': '费用',
     'tab.oc_overview': '概览',
+    'tab.oc_sessions': '会话',
     'tab.oc_traces': '追踪',
     'tab.oc_cost': '费用',
     'section.response_latency': '响应延迟',
@@ -630,6 +637,11 @@ var I18N = {
     'ui.yes': '是',
     'ui.unknown': '未知',
     'ui.per_hour': '/小时',
+    'ui.events': '个事件',
+    'ui.requests': '个请求',
+    'ui.errors': '个错误',
+    'ui.tool_calls': '次调用',
+    'ui.tokens': '个 token',
   },
   es: {
     'header.tagline': 'Tu agente ejecuta. TMA1 recuerda.',
@@ -836,6 +848,7 @@ var I18N = {
     'tab.cdx_tools': 'Herramientas',
     'tab.cdx_cost': 'Costos',
     'tab.oc_overview': 'Vista General',
+    'tab.oc_sessions': 'Sesiones',
     'tab.oc_traces': 'Trazas',
     'tab.oc_cost': 'Costos',
     'section.response_latency': 'Latencia de Respuesta',
@@ -925,6 +938,11 @@ var I18N = {
     'ui.yes': 'S\u00cd',
     'ui.unknown': 'desconocido',
     'ui.per_hour': '/hora',
+    'ui.events': 'eventos',
+    'ui.requests': 'solicitudes',
+    'ui.errors': 'errores',
+    'ui.tool_calls': 'llamadas',
+    'ui.tokens': 'tokens',
   },
 };
 
