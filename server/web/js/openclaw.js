@@ -152,7 +152,7 @@ async function oc_loadCards() {
     }
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
-    banner.textContent = 'OpenClaw metrics error: ' + err.message;
+    banner.textContent = t('error.oc_metrics') + err.message;
     return false;
   }
 }
@@ -238,7 +238,7 @@ async function oc_loadTokenChart() {
     renderChart('oc-chart-tokens', data, [
       { label: t('chart.input_tokens'), key: 'inp', color: '#79c0ff' },
       { label: t('chart.output_tokens'), key: 'outp', color: '#f0883e' },
-      { label: 'Cache Write', key: 'cw', color: '#3fb950' },
+      { label: t('chart.cache_creation'), key: 'cw', color: '#3fb950' },
     ], function(v) { return fmtNum(v); });
   } catch { /* no data */ }
 }
@@ -298,7 +298,7 @@ async function oc_loadSuccessRateChart() {
     var data = rowsToObjects(res);
     if (!data.length) return;
     renderChart('oc-chart-success-rate', data, [
-      { label: 'Success Rate %', key: 'rate', color: '#3fb950' },
+      { label: t('chart.success_rate_pct'), key: 'rate', color: '#3fb950' },
     ], function(v) { return Number(v).toFixed(1) + '%'; });
   } catch { /* table may not exist */ }
 }
@@ -407,8 +407,8 @@ async function oc_loadMessageFlowChart() {
     var data = Object.values(timeMap).sort(function(a, b) { return String(a.t) < String(b.t) ? -1 : 1; });
     if (!data.length) return;
     renderChart('oc-chart-msg-flow', data, [
-      { label: 'Processed', key: 'processed', color: '#3fb950' },
-      { label: 'Queued', key: 'queued', color: '#79c0ff' },
+      { label: t('chart.processed'), key: 'processed', color: '#3fb950' },
+      { label: t('chart.queued'), key: 'queued', color: '#79c0ff' },
     ], function(v) { return fmtNum(v); });
   } catch { /* table may not exist */ }
 }
@@ -441,8 +441,8 @@ async function oc_loadContextWindowChart() {
     var data = Object.values(timeMap).sort(function(a, b) { return String(a.t) < String(b.t) ? -1 : 1; });
     if (!data.length) return;
     renderChart('oc-chart-context', data, [
-      { label: 'Used', key: 'used', color: '#f0883e' },
-      { label: 'Limit', key: 'ctx_limit', color: '#d2a8ff' },
+      { label: t('chart.used'), key: 'used', color: '#f0883e' },
+      { label: t('chart.limit'), key: 'ctx_limit', color: '#d2a8ff' },
     ], function(v) { return fmtNum(v); });
   } catch { /* table may not exist */ }
 }
@@ -1069,25 +1069,25 @@ async function oc_loadTraceDetailData(traceId) {
       var spanTypes = [...new Set(spans.map(function(x) { return x.span_name; }).filter(Boolean))];
       var hasErrors = spans.some(function(x) { return x.span_status_code === 'STATUS_CODE_ERROR'; });
       metaEl.innerHTML =
-        metaItem('Trace ID', traceId) +
-        metaItem('Span Types', spanTypes.map(oc_shortSpanName).join(', ') || '\u2014') +
+        metaItem(t('table.trace_id'), traceId) +
+        metaItem(t('detail.span_types'), spanTypes.map(oc_shortSpanName).join(', ') || '\u2014') +
         metaItem(t('table.model'), models.join(', ') || '\u2014') +
-        metaItem('Channel', channels.join(', ') || '\u2014') +
-        metaItem('Provider', providers.join(', ') || '\u2014') +
-        metaItem('Session', root.session_key || '\u2014') +
-        metaItem('Outcome', root.outcome || '\u2014') +
-        (hasErrors ? metaItem('Errors', '<span class="badge badge-error">YES</span>') : '') +
-        (messageIds.length ? metaItem('Message ID', messageIds.join(', ')) : '') +
+        metaItem(t('table.channel'), channels.join(', ') || '\u2014') +
+        metaItem(t('detail.provider'), providers.join(', ') || '\u2014') +
+        metaItem(t('table.session'), root.session_key || '\u2014') +
+        metaItem(t('detail.outcome'), root.outcome || '\u2014') +
+        (hasErrors ? '<div class="meta-item"><div class="meta-label">' + t('table.errors') + '</div><div class="meta-value"><span class="badge badge-error">' + t('ui.yes') + '</span></div></div>' : '') +
+        (messageIds.length ? metaItem(t('detail.message_id'), messageIds.join(', ')) : '') +
         metaItem(t('detail.spans'), spans.length) +
         metaItem(t('detail.input_tokens'), fmtNum(totalInput)) +
         metaItem(t('detail.output_tokens'), fmtNum(totalOutput)) +
-        metaItem('Total Tokens (incl. cache)', fmtNum(totalAll)) +
+        metaItem(t('card.total_tokens'), fmtNum(totalAll)) +
         metaItem(t('table.duration'), fmtMs(root.duration_nano)) +
         metaItem(t('table.started'), fmtTime(root.timestamp));
 
       renderWaterfall(waterfallEl, spans);
     } else {
-      metaEl.innerHTML = metaItem('Trace ID', traceId);
+      metaEl.innerHTML = metaItem(t('table.trace_id'), traceId);
       waterfallEl.innerHTML = '<div class="loading">' + t('error.no_spans') + '</div>';
     }
   } catch {
@@ -1551,7 +1551,7 @@ async function oc_loadWebhookTimeline() {
         '<div class="anomaly-reason">' + t('anomaly.webhook_error') + '</div>' +
         '<div style="font-size:13px">' +
         (d.channel ? escapeHTML(d.channel) + ' &middot; ' : '') +
-        (d.session_key ? 'session: ' + escapeHTML(d.session_key) + ' &middot; ' : '') +
+        (d.session_key ? t('table.session') + ': ' + escapeHTML(d.session_key) + ' &middot; ' : '') +
         (d.duration_s != null ? d.duration_s + 's &middot; ' : '') +
         fmtTime(d.timestamp) +
         '</div></div>';

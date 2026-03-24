@@ -543,7 +543,7 @@ function cc_addEventToTraceGroup(g, e) {
 async function cc_loadPromptTraces() {
   var container = document.getElementById('cc-prompt-traces');
   if (!container) return;
-  container.innerHTML = '<div class="loading">Loading prompt traces...</div>';
+  container.innerHTML = '<div class="loading">' + t('empty.loading_prompt_traces') + '</div>';
 
   try {
     var iv = intervalSQL();
@@ -557,7 +557,7 @@ async function cc_loadPromptTraces() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      container.innerHTML = '<div class="chart-empty">No recent Claude events.</div>';
+      container.innerHTML = '<div class="chart-empty">' + t('empty.no_recent_cc_events') + '</div>';
       return;
     }
 
@@ -628,15 +628,15 @@ async function cc_loadPromptTraces() {
 
     if (!groups.length) {
       var hint;
-      if (!hasPromptId && !hasSessionId) hint = 'No prompt.id/session.id found in current logs.';
-      else if (hasPromptId) hint = 'No prompt trace matches current filter.';
-      else hint = 'No session trace matches current filter.';
+      if (!hasPromptId && !hasSessionId) hint = t('empty.no_prompt_session_id');
+      else if (hasPromptId) hint = t('empty.no_prompt_match');
+      else hint = t('empty.no_session_match');
       container.innerHTML = '<div class="chart-empty">' + escapeHTML(hint) + '</div>';
       return;
     }
 
     if (!hasPromptId) {
-      container.innerHTML = '<div class="loading">prompt.id not found, grouped by session.id + user_prompt boundaries.</div>';
+      container.innerHTML = '<div class="loading">' + t('empty.no_prompt_id') + '</div>';
     } else {
       container.innerHTML = '';
     }
@@ -664,20 +664,20 @@ async function cc_loadPromptTraces() {
         '<div class="anomaly-reason">' + escapeHTML(g.promptId) + '</div>' +
         '<div style="font-size:13px">' +
         fmtTime(g.latestTs) + ' · ' +
-        fmtNum(g.events.length) + ' events · ' +
-        fmtNum(g.reqs) + ' requests · ' +
+        fmtNum(g.events.length) + ' ' + t('table.event') + ' · ' +
+        fmtNum(g.reqs) + ' ' + t('table.requests') + ' · ' +
         fmtCost(g.cost) + ' · ' +
-        g.errors + ' errors' +
+        g.errors + ' ' + t('table.errors') +
         (models.length ? ' · ' + escapeHTML(models.slice(0, 3).join(', ')) : '') +
         '</div>' +
         '<div class="cc-prompt-detail" style="display:none;margin-top:8px">' + timeline + '</div>' +
         '</div>';
     }).join('');
     if (groups.length > maxShow) {
-      container.innerHTML += '<div class="loading">Showing latest ' + maxShow + ' traces.</div>';
+      container.innerHTML += '<div class="loading">' + t('empty.showing_latest_n').replace('{n}', maxShow) + '</div>';
     }
   } catch (err) {
-    container.innerHTML = '<div class="chart-empty">Failed to load prompt traces: ' + escapeHTML(err.message) + '</div>';
+    container.innerHTML = '<div class="chart-empty">' + t('error.load_prompt_traces') + ' ' + escapeHTML(err.message) + '</div>';
   }
 }
 
@@ -706,7 +706,7 @@ async function cc_loadBurnRate() {
     var container = document.getElementById('cc-burn-rate-cards');
     if (cost1h > 0) {
       container.style.display = '';
-      document.getElementById('cc-burn-hour').textContent = '$' + cost1h.toFixed(4) + '/hr';
+      document.getElementById('cc-burn-hour').textContent = '$' + cost1h.toFixed(4) + t('ui.per_hour');
       document.getElementById('cc-burn-day').textContent = '$' + (cost1h * 24).toFixed(2);
       document.getElementById('cc-burn-week').textContent = '$' + (cost1h * 24 * 7).toFixed(2);
     } else {
@@ -1408,7 +1408,7 @@ async function cc_loadToolFailures() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading">No recent failures.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('empty.no_recent_failures') + '</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(function(d, i) {
@@ -1425,6 +1425,6 @@ async function cc_loadToolFailures() {
         '<tr id="' + rowId + '" style="display:none"><td colspan="4"><pre style="margin:0;padding:8px 12px;font-size:12px;background:var(--bg-secondary);border-radius:4px;white-space:pre-wrap;word-break:break-all">' + escapeHTML(attrJson) + '</pre></td></tr>';
     }).join('');
   } catch {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">Failed to load failures.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('error.load_failures') + '</td></tr>';
   }
 }

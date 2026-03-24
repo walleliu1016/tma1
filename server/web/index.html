@@ -32,9 +32,9 @@
         <button data-lang="es" onclick="setLocale('es')">ES</button>
       </div>
       <div class="theme-toggle">
-        <button data-theme="light" onclick="setTheme('light')" title="Light">&#9788;</button>
-        <button data-theme="dark" onclick="setTheme('dark')" title="Dark">&#9790;</button>
-        <button data-theme="system" onclick="setTheme('system')" title="System">&#9881;</button>
+        <button data-theme="light" onclick="setTheme('light')" title="Light" data-i18n-title="ui.light">&#9788;</button>
+        <button data-theme="dark" onclick="setTheme('dark')" title="Dark" data-i18n-title="ui.dark">&#9790;</button>
+        <button data-theme="system" onclick="setTheme('system')" title="System" data-i18n-title="ui.system">&#9881;</button>
       </div>
       <select class="time-select" id="view-select" onchange="switchView(this.value)" style="display:none">
       </select>
@@ -178,10 +178,10 @@
     <div class="tab-content" id="tab-cc-sessions">
       <div class="filters">
         <input class="filter-input" id="cc-session-filter" type="text"
-               placeholder="Filter by session.id or prompt.id..." onkeydown="if(event.key==='Enter')cc_loadSessions()" />
+               placeholder="Filter by session.id or prompt.id..." data-i18n-placeholder="filter.filter_session_prompt" onkeydown="if(event.key==='Enter')cc_loadSessions()" />
         <button class="filter-btn primary" onclick="cc_loadSessions()" data-i18n="btn.refresh">Refresh</button>
       </div>
-      <div id="cc-sessions-truncation" class="truncation-warning" style="display:none">
+      <div id="cc-sessions-truncation" class="truncation-warning" style="display:none" data-i18n="warning.truncation">
         Results may be incomplete. Try a shorter time range for accurate totals.
       </div>
       <div style="overflow-x:auto">
@@ -190,12 +190,12 @@
             <tr>
               <th data-i18n="table.session">Session</th>
               <th data-i18n="table.started">Started</th>
-              <th>Duration</th>
-              <th>Turns</th>
-              <th>Tools</th>
+              <th data-i18n="table.duration">Duration</th>
+              <th data-i18n="table.turns">Turns</th>
+              <th data-i18n="table.tools">Tools</th>
               <th data-i18n="table.tokens">Tokens</th>
               <th data-i18n="table.cost">Cost</th>
-              <th>Errors</th>
+              <th data-i18n="table.errors">Errors</th>
             </tr>
           </thead>
           <tbody id="cc-sessions-body">
@@ -204,9 +204,9 @@
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="cc-sessions-prev-btn" onclick="cc_prevSessionsPage()">Prev</button>
+        <button class="filter-btn" id="cc-sessions-prev-btn" onclick="cc_prevSessionsPage()" data-i18n="pager.prev">Prev</button>
         <span id="cc-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="cc-sessions-next-btn" onclick="cc_nextSessionsPage()">Next</button>
+        <button class="filter-btn" id="cc-sessions-next-btn" onclick="cc_nextSessionsPage()" data-i18n="pager.next">Next</button>
       </div>
     </div>
 
@@ -219,11 +219,11 @@
             <thead>
               <tr>
                 <th data-i18n="table.tool">Tool</th>
-                <th>Category</th>
+                <th data-i18n="table.category">Category</th>
                 <th data-i18n="table.calls">Calls</th>
                 <th data-i18n="table.success_rate">Success Rate</th>
                 <th data-i18n="table.avg_latency">Avg Latency</th>
-                <th>P95</th>
+                <th data-i18n="table.p95">P95</th>
               </tr>
             </thead>
             <tbody id="cc-tools-perf-body">
@@ -233,18 +233,18 @@
         </div>
       </div>
       <div class="chart-container">
-        <h3>Tool Trends</h3>
+        <h3 data-i18n="section.tool_trends">Tool Trends</h3>
         <div id="cc-tool-trends-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Recent Failures</h3>
+        <h3 data-i18n="section.recent_failures">Recent Failures</h3>
         <div style="overflow-x:auto">
           <table>
             <thead>
               <tr>
                 <th data-i18n="table.timestamp">Timestamp</th>
                 <th data-i18n="table.tool">Tool</th>
-                <th>Error</th>
+                <th data-i18n="table.error_col">Error</th>
                 <th data-i18n="table.duration">Duration</th>
               </tr>
             </thead>
@@ -339,50 +339,50 @@
   <div id="view-codex" style="display:none">
     <div class="cards">
       <div class="card">
-        <div class="label">Estimated Cost</div>
+        <div class="label" data-i18n="card.est_cost">Estimated Cost</div>
         <div class="value cost" id="cdx-val-cost">&mdash;</div>
       </div>
       <div class="card">
-        <div class="label">Total Tokens</div>
+        <div class="label" data-i18n="card.total_tokens">Total Tokens</div>
         <div class="value tokens" id="cdx-val-tokens">&mdash;</div>
       </div>
       <div class="card">
-        <div class="label">API Requests</div>
+        <div class="label" data-i18n="card.api_requests">API Requests</div>
         <div class="value requests" id="cdx-val-requests">&mdash;</div>
       </div>
       <div class="card">
-        <div class="label">Avg Response Latency</div>
+        <div class="label" data-i18n="card.avg_response_latency">Avg Response Latency</div>
         <div class="value latency" id="cdx-val-latency">&mdash;</div>
       </div>
       <div class="card">
-        <div class="label">Avg TTFT</div>
+        <div class="label" data-i18n="card.avg_ttft">Avg TTFT</div>
         <div class="value latency" id="cdx-val-ttft">&mdash;</div>
       </div>
     </div>
 
     <div class="tabs" id="cdx-tabs">
-      <button class="tab active" data-cdxtab="cdx-overview">Overview</button>
-      <button class="tab" data-cdxtab="cdx-sessions">Sessions</button>
-      <button class="tab" data-cdxtab="cdx-tools">Tools</button>
-      <button class="tab" data-cdxtab="cdx-cost">Cost</button>
+      <button class="tab active" data-cdxtab="cdx-overview" data-i18n="tab.cdx_overview">Overview</button>
+      <button class="tab" data-cdxtab="cdx-sessions" data-i18n="tab.cdx_sessions">Sessions</button>
+      <button class="tab" data-cdxtab="cdx-tools" data-i18n="tab.cdx_tools">Tools</button>
+      <button class="tab" data-cdxtab="cdx-cost" data-i18n="tab.cdx_cost">Cost</button>
     </div>
 
     <div class="tab-content active" id="tab-cdx-overview">
       <div class="chart-container">
-        <h3>Token Usage Over Time</h3>
-        <div id="cdx-chart-tokens"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.token_usage">Token Usage Over Time</h3>
+        <div id="cdx-chart-tokens"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Response Latency</h3>
-        <div id="cdx-chart-latency"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.response_latency">Response Latency</h3>
+        <div id="cdx-chart-latency"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Turn Startup (TTFT / TTFM)</h3>
-        <div id="cdx-chart-turn-startup"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.turn_startup">Turn Startup (TTFT / TTFM)</h3>
+        <div id="cdx-chart-turn-startup"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Trace Span Distribution</h3>
-        <div id="cdx-span-dist" class="bar-chart"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.span_distribution">Trace Span Distribution</h3>
+        <div id="cdx-span-dist" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
         <h3 data-i18n="section.activity_heatmap">Activity Heatmap</h3>
@@ -413,20 +413,20 @@
     <div class="tab-content" id="tab-cdx-sessions">
       <div class="filters">
         <input class="filter-input" id="cdx-session-filter" type="text"
-               placeholder="Filter by call_id..." onkeydown="if(event.key==='Enter')cdx_loadSessions()" />
+               placeholder="Filter by call_id..." data-i18n-placeholder="filter.filter_call_id" onkeydown="if(event.key==='Enter')cdx_loadSessions()" />
         <button class="filter-btn primary" onclick="cdx_loadSessions()" data-i18n="btn.refresh">Refresh</button>
       </div>
-      <div id="cdx-sessions-truncation" class="truncation-warning" style="display:none">
+      <div id="cdx-sessions-truncation" class="truncation-warning" style="display:none" data-i18n="warning.truncation">
         Results may be incomplete. Try a shorter time range for accurate totals.
       </div>
       <div style="overflow-x:auto">
         <table>
           <thead>
             <tr>
-              <th>Turn</th>
+              <th data-i18n="table.turn">Turn</th>
               <th data-i18n="table.model">Model</th>
               <th data-i18n="table.tokens">Tokens</th>
-              <th>Tools</th>
+              <th data-i18n="table.tools">Tools</th>
               <th data-i18n="table.cost">Cost</th>
               <th data-i18n="table.duration">Duration</th>
               <th data-i18n="table.status">Status</th>
@@ -438,9 +438,9 @@
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="cdx-sessions-prev-btn" onclick="cdx_prevSessionsPage()">Prev</button>
+        <button class="filter-btn" id="cdx-sessions-prev-btn" onclick="cdx_prevSessionsPage()" data-i18n="pager.prev">Prev</button>
         <span id="cdx-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="cdx-sessions-next-btn" onclick="cdx_nextSessionsPage()">Next</button>
+        <button class="filter-btn" id="cdx-sessions-next-btn" onclick="cdx_nextSessionsPage()" data-i18n="pager.next">Next</button>
       </div>
     </div>
 
@@ -465,18 +465,18 @@
         </div>
       </div>
       <div class="chart-container">
-        <h3>Tool Trends</h3>
+        <h3 data-i18n="section.tool_trends">Tool Trends</h3>
         <div id="cdx-tool-trends-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Recent Failures</h3>
+        <h3 data-i18n="section.recent_failures">Recent Failures</h3>
         <div style="overflow-x:auto">
           <table>
             <thead>
               <tr>
                 <th data-i18n="table.timestamp">Timestamp</th>
                 <th data-i18n="table.tool">Tool</th>
-                <th>Error</th>
+                <th data-i18n="table.error_col">Error</th>
                 <th data-i18n="table.duration">Duration</th>
               </tr>
             </thead>
@@ -490,44 +490,44 @@
 
     <div class="tab-content" id="tab-cdx-cost">
       <div class="chart-container">
-        <h3>Estimated Cost by Model</h3>
-        <div id="cdx-cost-by-model" class="bar-chart"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.est_cost_by_model">Estimated Cost by Model</h3>
+        <div id="cdx-cost-by-model" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Top Expensive API Requests</h3>
+        <h3 data-i18n="section.top_expensive_cc">Top Expensive API Requests</h3>
         <table>
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Model</th>
-              <th>Input Tok</th>
-              <th>Output Tok</th>
-              <th>Estimated Cost</th>
-              <th>Duration</th>
+              <th data-i18n="table.timestamp">Timestamp</th>
+              <th data-i18n="table.model">Model</th>
+              <th data-i18n="table.input_tok">Input Tok</th>
+              <th data-i18n="table.output_tok">Output Tok</th>
+              <th data-i18n="table.est_cost">Estimated Cost</th>
+              <th data-i18n="table.duration">Duration</th>
             </tr>
           </thead>
           <tbody id="cdx-expensive-body">
-            <tr><td colspan="6" class="loading">Loading...</td></tr>
+            <tr><td colspan="6" class="loading" data-i18n="empty.loading">Loading...</td></tr>
           </tbody>
         </table>
       </div>
       <div class="chart-container">
-        <h3>Cache Efficiency</h3>
-        <div id="cdx-cache-chart" class="bar-chart"><div class="chart-empty">Waiting for data...</div></div>
+        <h3 data-i18n="section.cache_efficiency">Cache Efficiency</h3>
+        <div id="cdx-cache-chart" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Model Comparison</h3>
+        <h3 data-i18n="section.model_comparison">Model Comparison</h3>
         <table>
           <thead>
             <tr>
-              <th>Model</th>
-              <th>Requests</th>
-              <th>Avg Latency</th>
-              <th>Avg Cost</th>
+              <th data-i18n="table.model">Model</th>
+              <th data-i18n="table.requests">Requests</th>
+              <th data-i18n="table.avg_latency">Avg Latency</th>
+              <th data-i18n="table.avg_cost">Avg Cost</th>
             </tr>
           </thead>
           <tbody id="cdx-model-compare-body">
-            <tr><td colspan="4" class="loading">Loading...</td></tr>
+            <tr><td colspan="4" class="loading" data-i18n="empty.loading">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -561,10 +561,10 @@
     </div>
 
     <div class="tabs" id="oc-tabs">
-      <button class="tab active" data-octab="oc-overview">Overview</button>
+      <button class="tab active" data-octab="oc-overview" data-i18n="tab.oc_overview">Overview</button>
       <button class="tab" data-octab="oc-sessions" data-i18n="tab.cc_sessions">Sessions</button>
-      <button class="tab" data-octab="oc-traces">Traces</button>
-      <button class="tab" data-octab="oc-cost">Cost</button>
+      <button class="tab" data-octab="oc-traces" data-i18n="tab.oc_traces">Traces</button>
+      <button class="tab" data-octab="oc-cost" data-i18n="tab.oc_cost">Cost</button>
       <button class="tab" data-octab="oc-security" data-i18n="tab.oc_security">Security</button>
     </div>
 
@@ -583,11 +583,11 @@
         <div id="oc-chart-latency"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Success Rate</h3>
+        <h3 data-i18n="section.success_rate">Success Rate</h3>
         <div id="oc-chart-success-rate"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Channel Distribution</h3>
+        <h3 data-i18n="section.channel_distribution">Channel Distribution</h3>
         <div id="oc-channel-dist" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
@@ -595,31 +595,31 @@
         <div id="oc-cache-efficiency" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Provider Distribution</h3>
+        <h3 data-i18n="section.provider_distribution">Provider Distribution</h3>
         <div id="oc-provider-dist" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Message Flow</h3>
+        <h3 data-i18n="section.message_flow">Message Flow</h3>
         <div id="oc-chart-msg-flow"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Context Window Usage</h3>
+        <h3 data-i18n="section.context_window_usage">Context Window Usage</h3>
         <div id="oc-chart-context"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Outcome Distribution</h3>
+        <h3 data-i18n="section.outcome_distribution">Outcome Distribution</h3>
         <div id="oc-outcome-dist" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Session State</h3>
+        <h3 data-i18n="section.session_state">Session State</h3>
         <div id="oc-session-state" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Queue Depth</h3>
+        <h3 data-i18n="section.queue_depth">Queue Depth</h3>
         <div id="oc-chart-queue"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
-        <h3>Run Duration</h3>
+        <h3 data-i18n="section.run_duration">Run Duration</h3>
         <div id="oc-chart-run-duration"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
@@ -651,7 +651,7 @@
     <div class="tab-content" id="tab-oc-sessions">
       <div class="filters">
         <input class="filter-input" id="oc-session-filter" type="text"
-               placeholder="Filter by session key..." onkeydown="if(event.key==='Enter')oc_loadSessions()" />
+               placeholder="Filter by session key..." data-i18n-placeholder="filter.filter_session_key" onkeydown="if(event.key==='Enter')oc_loadSessions()" />
         <button class="filter-btn primary" onclick="oc_loadSessions()" data-i18n="btn.refresh">Refresh</button>
       </div>
       <div style="overflow-x:auto">
@@ -660,11 +660,11 @@
             <tr>
               <th data-i18n="table.session">Session</th>
               <th data-i18n="table.channel">Channel</th>
-              <th>Messages</th>
+              <th data-i18n="table.messages">Messages</th>
               <th data-i18n="table.tokens">Tokens</th>
               <th data-i18n="table.cost">Cost</th>
               <th data-i18n="table.duration">Duration</th>
-              <th>Errors</th>
+              <th data-i18n="table.errors">Errors</th>
             </tr>
           </thead>
           <tbody id="oc-sessions-body">
@@ -673,9 +673,9 @@
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="oc-sessions-prev-btn" onclick="oc_prevSessionsPage()">Prev</button>
+        <button class="filter-btn" id="oc-sessions-prev-btn" onclick="oc_prevSessionsPage()" data-i18n="pager.prev">Prev</button>
         <span id="oc-sessions-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="oc-sessions-next-btn" onclick="oc_nextSessionsPage()">Next</button>
+        <button class="filter-btn" id="oc-sessions-next-btn" onclick="oc_nextSessionsPage()" data-i18n="pager.next">Next</button>
       </div>
     </div>
 
@@ -683,22 +683,22 @@
     <div class="tab-content" id="tab-oc-traces">
       <div class="filters">
         <select class="filter-select" id="oc-trace-span-filter" onchange="oc_onTraceFilterChange()">
-          <option value="">All span types</option>
+          <option value="" data-i18n="filter.all_span_types">All span types</option>
         </select>
         <select class="filter-select" id="oc-trace-model-filter" onchange="oc_onTraceFilterChange()">
           <option value="" data-i18n="filter.all_models">All models</option>
         </select>
         <select class="filter-select" id="oc-trace-channel-filter" onchange="oc_onTraceFilterChange()">
-          <option value="">All channels</option>
+          <option value="" data-i18n="filter.all_channels">All channels</option>
         </select>
         <select class="filter-select" id="oc-trace-session-filter" onchange="oc_onTraceFilterChange()">
-          <option value="">All sessions</option>
+          <option value="" data-i18n="filter.all_sessions">All sessions</option>
         </select>
         <select class="filter-select" id="oc-trace-outcome-filter" onchange="oc_onTraceFilterChange()">
-          <option value="">All outcomes</option>
+          <option value="" data-i18n="filter.all_outcomes">All outcomes</option>
         </select>
         <input class="filter-input" id="oc-trace-query-filter" type="text"
-               placeholder="Search trace/span/model/channel..." onkeydown="if(event.key==='Enter')oc_onTraceFilterChange()" />
+               placeholder="Search trace/span/model/channel..." data-i18n-placeholder="filter.search_trace" onkeydown="if(event.key==='Enter')oc_onTraceFilterChange()" />
         <button class="filter-btn primary" onclick="oc_onTraceFilterChange()" data-i18n="btn.refresh">Refresh</button>
       </div>
       <div style="overflow-x:auto">
@@ -706,14 +706,14 @@
           <thead>
             <tr>
               <th data-i18n="table.timestamp">Timestamp</th>
-              <th>Span</th>
+              <th data-i18n="table.span">Span</th>
               <th data-i18n="table.model">Model</th>
-              <th>Channel</th>
+              <th data-i18n="table.channel">Channel</th>
               <th data-i18n="table.input_tok">Input Tok</th>
               <th data-i18n="table.output_tok">Output Tok</th>
-              <th>Cache Read</th>
+              <th data-i18n="table.cache_read">Cache Read</th>
               <th data-i18n="table.duration">Duration</th>
-              <th>Status</th>
+              <th data-i18n="table.status">Status</th>
             </tr>
           </thead>
           <tbody id="oc-traces-body">
@@ -722,9 +722,9 @@
         </table>
       </div>
       <div class="filters" style="margin-top:12px;justify-content:flex-end">
-        <button class="filter-btn" id="oc-trace-prev-btn" onclick="oc_prevTracePage()">Prev</button>
+        <button class="filter-btn" id="oc-trace-prev-btn" onclick="oc_prevTracePage()" data-i18n="pager.prev">Prev</button>
         <span id="oc-trace-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-        <button class="filter-btn" id="oc-trace-next-btn" onclick="oc_nextTracePage()">Next</button>
+        <button class="filter-btn" id="oc-trace-next-btn" onclick="oc_nextTracePage()" data-i18n="pager.next">Next</button>
       </div>
     </div>
 
@@ -735,11 +735,11 @@
         <div id="oc-cost-by-model" class="bar-chart"></div>
       </div>
       <div class="chart-container">
-        <h3>Cost by Channel</h3>
+        <h3 data-i18n="section.cost_by_channel">Cost by Channel</h3>
         <div id="oc-cost-by-channel" class="bar-chart"></div>
       </div>
       <div class="chart-container">
-        <h3>Top Expensive Requests</h3>
+        <h3 data-i18n="section.top_expensive_oc">Top Expensive Requests</h3>
         <table>
           <thead>
             <tr>
@@ -757,7 +757,7 @@
         </table>
       </div>
       <div class="chart-container">
-        <h3>Cache Savings Estimate</h3>
+        <h3 data-i18n="section.cache_savings">Cache Savings Estimate</h3>
         <div id="oc-cache-savings" class="bar-chart"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
       </div>
       <div class="chart-container">
@@ -938,8 +938,8 @@
       </select>
       <select class="filter-select" id="trace-status-filter" onchange="resetTracePaging();loadTraces()">
         <option value="" data-i18n="filter.all_statuses">All statuses</option>
-        <option value="STATUS_CODE_UNSET">OK</option>
-        <option value="STATUS_CODE_ERROR">ERROR</option>
+        <option value="STATUS_CODE_UNSET" data-i18n="filter.ok">OK</option>
+        <option value="STATUS_CODE_ERROR" data-i18n="filter.error">ERROR</option>
       </select>
       <button class="filter-btn primary" onclick="resetTracePaging();loadTraces()" data-i18n="btn.refresh">Refresh</button>
     </div>
@@ -963,9 +963,9 @@
       </table>
     </div>
     <div class="filters" style="margin-top:12px;justify-content:flex-end">
-      <button class="filter-btn" id="trace-prev-btn" onclick="prevTracePage()">Prev</button>
+      <button class="filter-btn" id="trace-prev-btn" onclick="prevTracePage()" data-i18n="pager.prev">Prev</button>
       <span id="trace-page-info" style="color:var(--text-muted);font-size:13px;min-width:120px;text-align:center">Page 1</span>
-      <button class="filter-btn" id="trace-next-btn" onclick="nextTracePage()">Next</button>
+      <button class="filter-btn" id="trace-next-btn" onclick="nextTracePage()" data-i18n="pager.next">Next</button>
     </div>
   </div>
 

@@ -188,13 +188,13 @@ function setHealthFromData(el, data) {
 
   var level, label;
   if (total === 0) {
-    level = 'na'; label = 'N/A';
+    level = 'na'; label = t('health.na');
   } else if (errRate > 5 || p95 > 5000) {
-    level = 'red'; label = 'Unhealthy';
+    level = 'red'; label = t('health.unhealthy');
   } else if (errRate > 1 || p95 > 2000) {
-    level = 'yellow'; label = 'Degraded';
+    level = 'yellow'; label = t('health.degraded');
   } else {
-    level = 'green'; label = 'Healthy';
+    level = 'green'; label = t('health.healthy');
   }
 
   var detail = total > 0

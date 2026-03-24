@@ -177,6 +177,22 @@ func TestIsFlowStatement(t *testing.T) {
 	}
 }
 
+func TestValidTTL(t *testing.T) {
+	valid := []string{"60d", "1h", "30m", "7d", "12M", "1y", "3600s", "2w", "forever"}
+	for _, v := range valid {
+		if v != "forever" && !validTTL.MatchString(v) {
+			t.Errorf("expected %q to be valid", v)
+		}
+	}
+
+	invalid := []string{"", "abc", "60", "d60", "60dd", "60d; DROP TABLE x", "1 h", "-1d"}
+	for _, v := range invalid {
+		if v == "forever" || validTTL.MatchString(v) {
+			t.Errorf("expected %q to be invalid", v)
+		}
+	}
+}
+
 func TestDefaultPricing(t *testing.T) {
 	// Verify seed data is well-formed.
 	if len(defaultPricing) == 0 {
