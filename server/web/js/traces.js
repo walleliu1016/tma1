@@ -345,7 +345,7 @@ async function loadTraces() {
       '<td>' + fmtNum(d.output_tok) + '</td>' +
       '<td>' + fmtDurMs(d.duration_ms) + '</td>' +
       '<td><span class="badge ' + (d.status === 'STATUS_CODE_ERROR' ? 'badge-error' : 'badge-ok') + '">' +
-        (d.status === 'STATUS_CODE_ERROR' ? 'ERROR' : 'OK') + '</span></td>' +
+        (d.status === 'STATUS_CODE_ERROR' ? t('filter.error') : t('filter.ok')) + '</span></td>' +
       '<td>' + escapeHTML(d.finish_reason || '') + '</td>' +
       '</tr>';
     }).join('');
@@ -434,19 +434,19 @@ async function loadTraceDetailData(traceId) {
       var hasError = spans.some(function(x) { return x.status === 'STATUS_CODE_ERROR'; });
       var models = [...new Set(spans.map(function(x) { return x.model; }).filter(Boolean))];
       metaEl.innerHTML =
-        metaItem('Trace ID', traceId) +
-        metaItem(t('table.model'), models.join(', ') || 'unknown') +
+        metaItem(t('table.trace_id'), traceId) +
+        metaItem(t('table.model'), models.join(', ') || t('ui.unknown')) +
         metaItem(t('detail.spans'), spans.length) +
         metaItem(t('detail.input_tokens'), fmtNum(totalInput)) +
         metaItem(t('detail.output_tokens'), fmtNum(totalOutput)) +
         metaItem(t('table.duration'), fmtMs(root.duration_nano)) +
-        metaItem(t('table.status'), hasError ? 'ERROR' : 'OK') +
+        metaItem(t('table.status'), hasError ? t('filter.error') : t('filter.ok')) +
         metaItem(t('table.started'), fmtTime(root.timestamp));
 
       // Build tree + waterfall
       renderWaterfall(waterfallEl, spans);
     } else {
-      metaEl.innerHTML = metaItem('Trace ID', traceId);
+      metaEl.innerHTML = metaItem(t('table.trace_id'), traceId);
       waterfallEl.innerHTML = '<div class="loading">' + t('error.no_spans') + '</div>';
     }
   } catch {

@@ -259,7 +259,7 @@ async function cdx_loadCards() {
     }
     var banner = document.getElementById('error-banner');
     banner.style.display = 'block';
-    banner.textContent = 'Codex metrics error: ' + err.message;
+    banner.textContent = t('error.cdx_metrics') + err.message;
     return false;
   }
 }
@@ -310,16 +310,16 @@ async function cdx_loadTokenChart() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No token data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_token_data') + '</div>';
       return;
     }
     renderChart('cdx-chart-tokens', data, [
-      { label: 'Input', key: 'input_tok', color: '#79c0ff' },
-      { label: 'Output', key: 'output_tok', color: '#f0883e' },
-      { label: 'Cached', key: 'cached_tok', color: '#3fb950' },
+      { label: t('chart.input_tokens'), key: 'input_tok', color: '#79c0ff' },
+      { label: t('chart.output_tokens'), key: 'output_tok', color: '#f0883e' },
+      { label: t('chart.cache_read'), key: 'cached_tok', color: '#3fb950' },
     ], function(v) { return fmtNum(v); });
   } catch {
-    el.innerHTML = '<div class="chart-empty">Failed to load token data.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('error.load_token_data') + '</div>';
   }
 }
 
@@ -339,8 +339,8 @@ async function cdx_loadLatencyChart() {
     var data = rowsToObjects(res);
     if (data.length) {
       renderChart('cdx-chart-latency', data, [
-        { label: 'P50', key: 'p50_ms', color: '#3fb950' },
-        { label: 'P95', key: 'p95_ms', color: '#d2a8ff' },
+        { label: t('chart.p50'), key: 'p50_ms', color: '#3fb950' },
+        { label: t('chart.p95'), key: 'p95_ms', color: '#d2a8ff' },
       ], function(v) { return fmtDurMs(v); });
       return;
     }
@@ -368,14 +368,14 @@ async function cdx_loadLatencyChart() {
     );
     var metricData = rowsToObjects(metricRes);
     if (!metricData.length) {
-      el.innerHTML = '<div class="chart-empty">No latency data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_latency_data') + '</div>';
       return;
     }
     renderChart('cdx-chart-latency', metricData, [
-      { label: 'Avg', key: 'avg_ms', color: '#3fb950' },
+      { label: t('chart.avg_latency'), key: 'avg_ms', color: '#3fb950' },
     ], function(v) { return fmtDurMs(v); });
   } catch {
-    el.innerHTML = '<div class="chart-empty">Failed to load latency data.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('error.load_latency_data') + '</div>';
   }
 }
 
@@ -386,7 +386,7 @@ async function cdx_loadTurnStartupChart() {
       !cdx_hasMetricTable('codex_turn_ttft_duration_ms_milliseconds_count') ||
       !cdx_hasMetricTable('codex_turn_ttfm_duration_ms_milliseconds_sum') ||
       !cdx_hasMetricTable('codex_turn_ttfm_duration_ms_milliseconds_count')) {
-    el.innerHTML = '<div class="chart-empty">No TTFT/TTFM metric data.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('empty.no_ttft_data') + '</div>';
     return;
   }
   try {
@@ -442,7 +442,7 @@ async function cdx_loadTurnStartupChart() {
       };
     }).filter(function(row) { return row.ttft_ms != null || row.ttfm_ms != null; });
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No TTFT/TTFM metric data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_ttft_data') + '</div>';
       return;
     }
     renderChart('cdx-chart-turn-startup', data, [
@@ -450,7 +450,7 @@ async function cdx_loadTurnStartupChart() {
       { label: 'TTFM', key: 'ttfm_ms', color: '#f0883e' },
     ], function(v) { return fmtDurMs(v); });
   } catch {
-    el.innerHTML = '<div class="chart-empty">Failed to load TTFT/TTFM metrics.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('error.load_ttft') + '</div>';
   }
 }
 
@@ -468,7 +468,7 @@ async function cdx_loadSpanDistribution() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No Codex span data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_span_data') + '</div>';
       return;
     }
     var maxCnt = Math.max.apply(null, data.map(function(d) { return Number(d.cnt) || 0; }));
@@ -481,7 +481,7 @@ async function cdx_loadSpanDistribution() {
         '<div class="bar-value">' + fmtNum(cnt) + '</div></div>';
     }).join('');
   } catch {
-    el.innerHTML = '<div class="chart-empty">Failed to load span distribution.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('error.load_span_dist') + '</div>';
   }
 }
 
@@ -489,7 +489,7 @@ async function cdx_loadRequestOutcome() {
   var el = document.getElementById('cdx-request-outcome');
   if (!el) return;
   if (!cdx_hasMetricTable('codex_websocket_request_total')) {
-    el.innerHTML = '<div class="chart-empty">No request outcome metrics.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('empty.no_outcome_data') + '</div>';
     return;
   }
   try {
@@ -501,7 +501,7 @@ async function cdx_loadRequestOutcome() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No request outcome metrics.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_outcome_data') + '</div>';
       return;
     }
     var maxCnt = Math.max.apply(null, data.map(function(d) { return Number(d.cnt) || 0; }));
@@ -515,7 +515,7 @@ async function cdx_loadRequestOutcome() {
         '<div class="bar-value">' + fmtNum(cnt) + '</div></div>';
     }).join('');
   } catch {
-    el.innerHTML = '<div class="chart-empty">Failed to load request outcome metrics.</div>';
+    el.innerHTML = '<div class="chart-empty">' + t('error.load_outcome') + '</div>';
   }
 }
 
@@ -562,7 +562,7 @@ async function cdx_loadToolPerformance() {
     var data = rowsToObjects(res);
     var tbody = document.getElementById('cdx-tool-perf-body');
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading">No tool data.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('empty.no_tool_data') + '</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(function(d) {
@@ -578,7 +578,7 @@ async function cdx_loadToolPerformance() {
     }).join('');
   } catch {
     document.getElementById('cdx-tool-perf-body').innerHTML =
-      '<tr><td colspan="4" class="loading">Failed to load tool data.</td></tr>';
+      '<tr><td colspan="4" class="loading">' + t('error.load_tool_perf') + '</td></tr>';
   }
 }
 
@@ -615,7 +615,7 @@ async function cdx_loadEvents() {
         cdxEventsPage--;
         return cdx_loadEvents();
       }
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">No recent Codex events.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">' + t('empty.no_recent_events') + '</td></tr>';
       cdx_updateEventsPager(0);
       return;
     }
@@ -677,7 +677,7 @@ async function cdx_loadCostByModel() {
     var data = rowsToObjects(res);
     var el = document.getElementById('cdx-cost-by-model');
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No cost data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_cost_data') + '</div>';
       return;
     }
     var maxCost = Math.max.apply(null, data.map(function(d) { return Number(d.total_cost) || 0; }));
@@ -709,7 +709,7 @@ async function cdx_loadExpensiveRequests() {
     var data = rowsToObjects(res);
     var tbody = document.getElementById('cdx-expensive-body');
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading">No request data.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">' + t('empty.no_request_data') + '</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(function(d) {
@@ -740,7 +740,7 @@ async function cdx_loadCacheEfficiency() {
     var data = rowsToObjects(res);
     var el = document.getElementById('cdx-cache-chart');
     if (!data.length) {
-      el.innerHTML = '<div class="chart-empty">No cache data.</div>';
+      el.innerHTML = '<div class="chart-empty">' + t('empty.no_cache_data') + '</div>';
       return;
     }
     el.innerHTML = data.map(function(d) {
@@ -819,7 +819,7 @@ async function cdx_loadModelComparison() {
     }
     var tbody = document.getElementById('cdx-model-compare-body');
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading">No model data.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('empty.no_model_data') + '</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(function(d) {
@@ -1086,18 +1086,18 @@ function cdx_toggleSessionDetail(groupIdx, clickedRow) {
       'overflow-x:auto;white-space:pre-wrap;word-break:break-all">' +
       escapeHTML(attrJson) + '</pre>';
   }).join('');
-  if (!timeline) timeline = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No meaningful events in this turn.</div>';
+  if (!timeline) timeline = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">' + t('empty.no_meaningful_events') + '</div>';
 
   var detailRow = document.createElement('tr');
   detailRow.className = 'cdx-session-detail-row trace-detail-row';
   detailRow.dataset.idx = groupIdx;
   detailRow.innerHTML = '<td colspan="7"><div class="trace-detail-inner">' +
-    '<div class="detail-header"><h3>Turn: ' + escapeHTML(g.turnId) + '</h3>' +
+    '<div class="detail-header"><h3>' + t('table.turn') + ': ' + escapeHTML(g.turnId) + '</h3>' +
     '<button class="close-btn" onclick="this.closest(\'.cdx-session-detail-row\').remove()">&times;</button></div>' +
     '<div style="margin-bottom:8px;font-size:13px">' +
-    events.length + ' events \u00b7 ' +
-    g.tools + ' tool calls \u00b7 ' +
-    fmtNum(g.tokens) + ' tokens \u00b7 ' +
+    events.length + ' ' + t('ui.events') + ' \u00b7 ' +
+    g.tools + ' ' + t('ui.tool_calls') + ' \u00b7 ' +
+    fmtNum(g.tokens) + ' ' + t('ui.tokens') + ' \u00b7 ' +
     fmtCost(g.cost) +
     '</div>' +
     '<div style="max-height:400px;overflow-y:auto">' + timeline + '</div>' +
@@ -1232,7 +1232,7 @@ async function cdx_loadToolFailures() {
     );
     var data = rowsToObjects(res);
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading">No recent failures.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('empty.no_recent_failures') + '</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(function(d, i) {
@@ -1249,7 +1249,7 @@ async function cdx_loadToolFailures() {
         '<tr id="' + rowId + '" style="display:none"><td colspan="4"><pre style="margin:0;padding:8px 12px;font-size:12px;background:var(--bg-secondary);border-radius:4px;white-space:pre-wrap;word-break:break-all">' + escapeHTML(attrJson) + '</pre></td></tr>';
     }).join('');
   } catch {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">Failed to load failures.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">' + t('error.load_failures') + '</td></tr>';
   }
 }
 

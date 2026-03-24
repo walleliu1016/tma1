@@ -9,9 +9,13 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// validTTL matches GreptimeDB TTL values: digits + unit suffix, or "forever".
+var validTTL = regexp.MustCompile(`^\d+[smhdwMy]$`)
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
 
@@ -22,6 +26,9 @@ var flowsSQL string
 // auto-created tables (OTel traces, logs, metrics) inherit it.
 // Idempotent — safe to call on every startup.
 func SetDatabaseTTL(httpPort int, ttl string, logger *slog.Logger) error {
+	if ttl != "forever" && !validTTL.MatchString(ttl) {
+		return fmt.Errorf("invalid TTL %q: must match <digits><unit> (e.g. 60d) or 'forever'", ttl)
+	}
 	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
 	stmt := fmt.Sprintf("ALTER DATABASE public SET 'ttl'='%s'", ttl)
 	if err := execSQL(sqlURL, stmt); err != nil {

@@ -389,7 +389,7 @@ async function checkDataFreshness() {
   var el = document.getElementById('data-freshness');
   if (!el || !currentView) { if (el) el.textContent = ''; return; }
 
-  var sql;
+  var sql, lastTs;
   if (currentView === 'claude-code') {
     // Check both logs and metrics — use whichever is newer
     try {
@@ -399,7 +399,6 @@ async function checkDataFreshness() {
       ]);
       var ts1 = ccResults[0] && rows(ccResults[0])?.[0]?.[0];
       var ts2 = ccResults[1] && rows(ccResults[1])?.[0]?.[0];
-      var lastTs = null;
       if (ts1 && ts2) lastTs = parseTimestamp(ts1) > parseTimestamp(ts2) ? ts1 : ts2;
       else lastTs = ts1 || ts2;
       renderFreshness(el, lastTs);
@@ -469,9 +468,9 @@ function renderFreshness(el, lastTs) {
   }
   var diffSec = Math.floor(diffMs / 1000);
   var label;
-  if (diffSec < 60) label = diffSec + 's ago';
-  else if (diffSec < 3600) label = Math.floor(diffSec / 60) + 'm ago';
-  else label = Math.floor(diffSec / 3600) + 'h ago';
+  if (diffSec < 60) label = t('freshness.seconds_ago').replace('{n}', diffSec);
+  else if (diffSec < 3600) label = t('freshness.minutes_ago').replace('{n}', Math.floor(diffSec / 60));
+  else label = t('freshness.hours_ago').replace('{n}', Math.floor(diffSec / 3600));
 
   el.textContent = t('freshness.last_data') + label;
   el.className = 'data-freshness';
