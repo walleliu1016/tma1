@@ -666,9 +666,9 @@ async function cc_loadExpensiveRequests() {
       var attrs = cc_parseAttrs(d.log_attributes);
       var sid = cc_attr(attrs, 'session.id') || '';
       var tsMs = tsToMs(d.timestamp) || 0;
-      // Token fingerprint: input_tokens,output_tokens,cache_creation_tokens — unique per API call within a session.
-      var fp = (Number(d.input_tok) || 0) + ',' + (Number(d.output_tok) || 0) + ',' + (Number(cc_attr(attrs, 'cache_creation_tokens')) || 0);
-      var onclick = sid ? ' class="clickable" onclick="sess_openDetail(\x27' + escapeJSString(sid) + '\x27,\x27claude_code\x27,' + tsMs + ',\x27' + escapeJSString(fp) + '\x27)"' : '';
+      var seq = cc_attr(attrs, 'event.sequence');
+      var apiKey = seq != null ? 'seq:' + seq : String(tsMs);
+      var onclick = sid ? ' class="clickable" onclick="sess_openDetail(\x27' + escapeJSString(sid) + '\x27,\x27claude_code\x27,' + tsMs + ',\x27' + escapeJSString(apiKey) + '\x27)"' : '';
       return '<tr' + onclick + '><td>' + fmtTime(d.timestamp) + '</td>' +
       '<td>' + escapeHTML(d.model || 'unknown') + '</td>' +
       '<td>' + fmtNum(d.input_tok) + '</td>' +
@@ -762,7 +762,7 @@ async function cc_loadAnomalies() {
       "FROM opentelemetry_logs WHERE body = 'claude_code.api_request' " +
       "AND timestamp > NOW() - INTERVAL '" + iv + "'"
     );
-    var avgCost = rows(avgRes)?.[0]?.[0] || 0;
+    var avgCost = Number(rows(avgRes)?.[0]?.[0]) || 0;
     var threshold = Math.max(avgCost * 3, 0.01);
 
     var res = await query(
@@ -825,12 +825,11 @@ async function cc_loadAnomalies() {
       var attrs = cc_parseAttrs(d.log_attributes);
       var sid = cc_attr(attrs, 'session.id') || '';
       var tsMs = tsToMs(d.timestamp) || 0;
-      // High-cost api_request: pass token fingerprint for precise API call matching.
-      // api_error: no token data, only timeline positioning.
-      var fp = d.body === 'claude_code.api_request'
-        ? (Number(d.input_tok) || 0) + ',' + (Number(d.output_tok) || 0) + ',' + (Number(cc_attr(attrs, 'cache_creation_tokens')) || 0)
-        : '';
-      var fpArg = fp ? ',\x27' + escapeJSString(fp) + '\x27' : '';
+      // High-cost api_request: pass event.sequence for precise API call matching.
+      // api_error: no sequence, only timeline positioning.
+      var seq = d.body === 'claude_code.api_request' ? cc_attr(attrs, 'event.sequence') : null;
+      var apiKey = seq != null ? 'seq:' + seq : '';
+      var fpArg = apiKey ? ',\x27' + escapeJSString(apiKey) + '\x27' : '';
       var onclick = sid ? ' onclick="sess_openDetail(\x27' + escapeJSString(sid) + '\x27,\x27claude_code\x27,' + tsMs + fpArg + ')"' : '';
       return '<div class="anomaly-item ' + severity + ' clickable"' + onclick + '>' +
         '<div class="anomaly-reason">' + reason + '</div>' +

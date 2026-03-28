@@ -89,7 +89,7 @@ var AgentCanvas = (function () {
     for (i = 0; i < ids.length; i++) {
       a = agents[ids[i]];
       // Auto-complete idle subagents (handles missing SubagentStop, e.g. Codex).
-      // Only when 'thinking' (waiting for next action), not 'tool_calling' (tool still running).
+      // Only 'thinking' state: agent finished tools but no SubagentStop arrived.
       if (!a.isMain && a.state === 'thinking' && globalTime - a.lastActive > 10) {
         a.state = 'complete';
       }

@@ -121,7 +121,10 @@ function updateHash() {
     if (tabName2 && tabName2 !== 'overview') hash += '/' + tabName2;
   }
   hash += '/' + currentTimeRange;
-  history.replaceState(null, '', '#' + hash);
+  var newHash = '#' + hash;
+  if (newHash !== location.hash) {
+    history.pushState(null, '', newHash);
+  }
 }
 
 function parseHash() {
@@ -574,3 +577,20 @@ initLocale();
 checkStatus();
 initViews();
 setInterval(checkStatus, 10000);
+
+// Handle browser back/forward buttons.
+window.addEventListener('popstate', function() {
+  var hash = parseHash();
+  if (hash.view) {
+    if (hash.range) {
+      currentTimeRange = hash.range;
+      document.getElementById('time-range').value = hash.range;
+    }
+    switchView(hash.view, true);
+    if (hash.tab) {
+      // Restore sub-tab if present.
+      var tabBtn = document.querySelector('[data-cctab="' + hash.tab + '"],[data-cdxtab="' + hash.tab + '"],[data-octab="' + hash.tab + '"],[data-sesstab="' + hash.tab + '"]');
+      if (tabBtn) tabBtn.click();
+    }
+  }
+});

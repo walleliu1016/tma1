@@ -673,7 +673,7 @@ async function cdx_loadAnomalies() {
       "SELECT AVG(" + estCost + ") AS avg_cost " +
       cdx_logsFromWhere() + " AND " + cdx_requestPredicate()
     );
-    var avgCost = rows(avgRes)?.[0]?.[0] || 0;
+    var avgCost = Number(rows(avgRes)?.[0]?.[0]) || 0;
     var threshold = Math.max(avgCost * 3, 0.01);
 
     // High-cost requests.

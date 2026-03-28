@@ -354,6 +354,7 @@ function sess_parseCCOTel(rows, sessionId) {
     if (!a) continue;
     var rowSessionId = sess_attr(a, 'session.id');
     if (sessionId && rowSessionId && rowSessionId !== sessionId) continue;
+    var seq = a['event.sequence'];
     calls.push({
       ts: tsToMs(rows[i].timestamp),
       model: a.model || '',
@@ -364,6 +365,7 @@ function sess_parseCCOTel(rows, sessionId) {
       cost: parseFloat(a.cost_usd) || 0,
       durationMs: parseFloat(a.duration_ms) || 0,
       toolUseIds: [],
+      eventSeq: seq != null ? seq : null,
     });
   }
   return calls;
@@ -629,7 +631,7 @@ function renderSessionDetail(timeline, stats) {
     html += '<button class="filter-btn" onclick="AgentCanvas.open(\x27live\x27,{sessionId:\x27' + escapeJSString(sessExpandedId) + '\x27})">' + t('sessions.btn_live_canvas') + '</button>';
   }
   html += '<button class="filter-btn" onclick="AgentCanvas.open(\x27replay\x27,{timelineData:sessTimelineData,speed:1,sessionId:\x27' + escapeJSString(sessExpandedId) + '\x27})">\u25B6 ' + t('sessions.btn_replay') + '</button>';
-  html += '<button class="sess-close-btn" onclick="sess_closeDetail()" title="' + t('ui.close') + '">\u2715</button>';
+  html += '<button class="sess-close-btn" onclick="sess_closeDetail()" title="' + t('ui.close') + '" aria-label="' + t('ui.close') + '">\u2715</button>';
   html += '</div>';
   html += '</div>'; // .sess-detail-kpi
 
@@ -803,11 +805,11 @@ function sess_renderAPICalls(stats) {
     var c = calls[i];
     var modelShort = (c.model || 'unknown').replace(/^claude-/, '').replace(/-\d{8}$/, '');
     var tuids = (c.toolUseIds || []).join(',');
-    var fp = c.inputTokens + ',' + c.outputTokens + ',' + c.cacheCreationTokens;
+    var apiKey = c.eventSeq != null ? 'seq:' + c.eventSeq : String(c.ts || 0);
     var clickAction = tuids
       ? 'sess_scrollToToolUseId(\x27' + escapeJSString(tuids.split(',')[0]) + '\x27)'
       : 'sess_scrollToEvent(document.getElementById(\x27sess-timeline-scroll\x27),' + (c.ts || 0) + ')';
-    html += '<tr class="clickable" data-ts="' + (c.ts || 0) + '" data-fp="' + escapeHTML(fp) + '" data-tool-use-ids="' + escapeHTML(tuids) + '" onclick="' + clickAction + '">';
+    html += '<tr class="clickable" data-ts="' + (c.ts || 0) + '" data-fp="' + escapeHTML(apiKey) + '" data-tool-use-ids="' + escapeHTML(tuids) + '" onclick="' + clickAction + '">';
     html += '<td style="text-align:left;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHTML(c.model || '') + '">' + escapeHTML(modelShort) + '</td>';
     html += '<td>' + fmtTokens(c.inputTokens) + '</td>';
     html += '<td>' + fmtTokens(c.outputTokens) + '</td>';
