@@ -219,6 +219,18 @@ function sess_closeDetail() {
   document.removeEventListener('keydown', sess_escHandler);
 }
 
+function sess_togglePanel(side) {
+  var body = document.querySelector('.sess-overlay-body');
+  if (!body) return;
+  var cls = 'expand-' + side;
+  if (body.classList.contains(cls)) {
+    body.classList.remove(cls);
+  } else {
+    body.classList.remove('expand-left', 'expand-right');
+    body.classList.add(cls);
+  }
+}
+
 function sess_toggleErrors() {
   var panel = document.getElementById('sess-error-panel');
   if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -667,6 +679,7 @@ function renderSessionDetail(timeline, stats) {
 
   // Left: Insights panel.
   html += '<div class="sess-insights-panel">';
+  html += '<button class="sess-panel-toggle" onclick="sess_togglePanel(\x27left\x27)" title="' + t('ui.expand') + '">&#x21C9;</button>';
   html += sess_renderContextBar(stats.context);
   if (stats.apiCalls.length > 0) html += sess_renderAPICalls(stats);
   html += sess_renderFileHeatmap(stats.files);
@@ -676,6 +689,7 @@ function renderSessionDetail(timeline, stats) {
 
   // Right: Timeline panel.
   html += '<div class="sess-timeline-panel">';
+  html += '<button class="sess-panel-toggle" onclick="sess_togglePanel(\x27right\x27)" title="' + t('ui.expand') + '">&#x21C7;</button>';
 
   // Toolbar.
   var toolNames = {};
