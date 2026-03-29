@@ -11,15 +11,14 @@ const onboardingCmd = 'Read https://tma1.ai/SKILL.md and follow the instructions
 const curlCmd = 'curl -fsSL https://tma1.ai/install.sh | bash';
 const psCmd = 'irm https://tma1.ai/install.ps1 | iex';
 
-// Screenshot pairs for showcase rows (cards 01-05)
-// padded: true → narrow crop, centered vertically with dashboard bg fill
+// Screenshot pairs for showcase rows (cards 01-06)
 const showcase = [
-  { dark: '/screenshots/cost-dark.webp', light: '/screenshots/cost-light.webp', w: 2926, h: 1698 },
-  { dark: '/screenshots/sessions-dark.webp', light: '/screenshots/sessions-light.webp', w: 3010, h: 1706 },
+  { dark: '/screenshots/cost-dark.webp', light: '/screenshots/cost-light.webp', w: 3024, h: 1704 },
+  { dark: '/screenshots/anomaly-dark.webp', light: '/screenshots/anomaly-light.webp', w: 3024, h: 1706 },
+  { video: '/screenshots/session-live.mp4', dark: '/screenshots/sessions-dark.webp', light: '/screenshots/sessions-light.webp', w: 3024, h: 1704 },
   { dark: '/screenshots/tools-dark.webp', light: '/screenshots/tools-light.webp', w: 3010, h: 1706 },
   { dark: '/screenshots/security-dark.webp', light: '/screenshots/security-light.webp', w: 3010, h: 1154 },
-  { dark: '/screenshots/traces-dark.webp', light: '/screenshots/traces-light.webp', w: 2938, h: 1714 },
-  { dark: '/screenshots/anomaly-dark.webp', light: '/screenshots/anomaly-light.webp', w: 2926, h: 1564 },
+  { dark: '/screenshots/search-dark.webp', light: '/screenshots/search-light.webp', w: 3024, h: 1354 },
 ];
 ---
 
@@ -152,12 +151,27 @@ const showcase = [
                 <span class="browser-url">localhost:14318</span>
               </div>
               <div class="showcase-frame__body">
-                <img class="theme-img"
-                  data-dark-src={showcase[i].dark}
-                  data-light-src={showcase[i].light}
-                  src={showcase[i].dark}
-                  alt={`TMA1 Dashboard — ${c.title}`}
-                  loading="lazy" width={showcase[i].w} height={showcase[i].h} />
+                {showcase[i].video ? (
+                  <div class="showcase-media-stack">
+                    <img class="theme-img showcase-still"
+                      data-dark-src={showcase[i].dark}
+                      data-light-src={showcase[i].light}
+                      src={showcase[i].dark}
+                      alt={`TMA1 Dashboard — ${c.title}`}
+                      loading="lazy" width={showcase[i].w} height={showcase[i].h} />
+                    <video class="showcase-video" muted playsinline
+                      width={showcase[i].w} height={showcase[i].h}>
+                      <source src={showcase[i].video} type="video/mp4" />
+                    </video>
+                  </div>
+                ) : (
+                  <img class="theme-img"
+                    data-dark-src={showcase[i].dark}
+                    data-light-src={showcase[i].light}
+                    src={showcase[i].dark}
+                    alt={`TMA1 Dashboard — ${c.title}`}
+                    loading="lazy" width={showcase[i].w} height={showcase[i].h} />
+                )}
               </div>
             </div>
           </div>
@@ -589,9 +603,15 @@ const showcase = [
   .showcase-frame .browser-chrome { padding: 8px 12px; }
   .showcase-frame .browser-url { font-size: 10px; }
   .showcase-frame__body { line-height: 0; }
-  .showcase-frame__body img {
+  .showcase-frame__body img, .showcase-frame__body video {
     width: 100%; height: auto; display: block;
   }
+  .showcase-media-stack { position: relative; }
+  .showcase-media-stack .showcase-video {
+    position: absolute; inset: 0; opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .showcase-media-stack .showcase-video.active { opacity: 1; }
   .showcase-frame--padded .showcase-frame__body {
     display: flex;
     align-items: center;
@@ -824,6 +844,33 @@ const showcase = [
   lightbox.addEventListener('click', closeLightbox);
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeLightbox();
+  });
+
+  // Screenshot → Video → Screenshot loop, triggered when scrolled into view.
+  document.querySelectorAll('.showcase-media-stack').forEach(function(stack) {
+    var video = stack.querySelector('.showcase-video');
+    if (!video) return;
+    var started = false;
+    function cycle() {
+      setTimeout(function() {
+        video.currentTime = 0;
+        video.play();
+        video.classList.add('active');
+        video.addEventListener('ended', function onEnd() {
+          video.removeEventListener('ended', onEnd);
+          video.classList.remove('active');
+          cycle();
+        });
+      }, 3000);
+    }
+    var observer = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting && !started) {
+        started = true;
+        observer.disconnect();
+        cycle();
+      }
+    }, { threshold: 0.3 });
+    observer.observe(stack);
   });
 
   // Typing effect for hero hook

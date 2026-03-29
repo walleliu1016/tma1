@@ -9,6 +9,8 @@ No cloud account, no Docker, no Grafana setup.
 Named after TMA-1 (Tycho Magnetic Anomaly-1) from *2001: A Space Odyssey*:
 the monolith buried on the moon, silently recording everything until you dig it out.
 
+![TMA1 Dashboard](site/public/screenshots/hero-dark.webp)
+
 ## What You Get
 
 Five dashboard views, auto-detected from available data:
@@ -33,6 +35,10 @@ Every view includes:
 - **SQL access** via MySQL protocol (port 14002) or the built-in query API
 
 Security tab (OpenClaw & OTel GenAI) adds shell command detection, prompt injection alerts, and webhook error tracking.
+
+![Session Detail](site/public/screenshots/sessions-dark.webp)
+
+![Cost & Burn Rate](site/public/screenshots/cost-dark.webp)
 
 ## Quick Install
 

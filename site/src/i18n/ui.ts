@@ -47,15 +47,14 @@ export const en: T = {
   ],
   features: {
     kicker: 'Features', title: 'Observability without the overhead',
-    desc: 'Four dedicated views \u2014 Claude Code, Codex, OpenClaw, and OTel GenAI \u2014 auto-detected from your data. No Grafana, no cloud, no YAML.',
+    desc: 'Five views for Claude Code, Codex, OpenClaw, OTel GenAI, and Sessions. The dashboard picks the right one from your data. No Grafana, no cloud, no YAML.',
     cards: [
-      { num: '01', title: 'Cost breakdown', desc: 'Which model costs the most? Which conversation burned through your budget? Token counts and estimated cost per model, with burn-rate projections and cache efficiency analysis.' },
-      { num: '02', title: 'Session replay', desc: 'Your agent ran for 25 minutes across 4 turns. What happened? Drill into any session to see every API call, tool decision, and result \u2014 with model, tokens, cost, and latency per event.' },
-      { num: '03', title: 'Tool analytics', desc: 'When your agent feels slow, is it the model or the tool calls? p50 and p95 latency percentiles per tool, with call counts, success rates, and trend charts over time.' },
-      { num: '04', title: 'Security monitoring', desc: 'Your agent can run shell commands, fetch URLs, and be fed injected prompts. TMA1 flags all of it. Tracks webhook errors, stuck sessions, and channel health for OpenClaw.' },
-      { num: '05', title: 'Conversation replay', desc: 'Your agent just edited 15 files. What was it thinking? Click a trace to read the full dialogue \u2014 handy for debugging or auditing what your agent did.' },
-      { num: '06', title: 'Anomaly detection', desc: 'An agent stuck in a retry loop can burn hundreds of dollars. TMA1 flags unusual token counts, high error rates, and slow responses before costs pile up.' },
-      { num: '07', title: 'Full-text search', desc: 'Search everything. Find a specific model, trace an error back to a call, or filter by tool name.' },
+      { num: '01', title: 'Cost breakdown', desc: 'Which model costs the most? Which conversation burned through your budget? Token counts and estimated cost per model, plus burn-rate over time and cache hit ratios.' },
+      { num: '02', title: 'Anomaly detection', desc: 'An agent stuck in a retry loop can burn hundreds of dollars. Each agent view has an Anomalies tab. Click any flagged request to jump straight into that session and see what went wrong.' },
+      { num: '03', title: 'Sessions', desc: 'Your agent ran for 25 minutes across 4 turns. What happened? Open the session overlay: left side shows file activity, context breakdown, and API calls. Right side is the full event timeline. Or watch the live canvas while your agent works.' },
+      { num: '04', title: 'Tool analytics', desc: 'When your agent feels slow, is it the model or the tool calls? p50 and p95 latency per tool, call counts, success rates, and trend lines.' },
+      { num: '05', title: 'Security monitoring', desc: 'Your agent can run shell commands, fetch URLs, and be fed injected prompts. TMA1 flags all of it. For OpenClaw it also tracks webhook errors and stuck sessions.' },
+      { num: '06', title: 'Full-text search', desc: 'Type a keyword in the Sessions search tab and it finds matching conversations, tool calls, and results across all sessions. Click a result to open the session at that exact event.' },
     ],
   },
   how: {
@@ -82,8 +81,8 @@ export const en: T = {
   faq: {
     kicker: 'FAQ', title: 'Common questions',
     items: [
-      { q: 'Which agents are supported?', a: 'Any agent that emits OpenTelemetry data. Claude Code sends metrics and logs. Codex sends logs and traces, and can also emit native metrics when <code>otel.metrics_exporter</code> is configured. OpenClaw sends traces and metrics. Any OTel SDK app with GenAI semantic conventions works out of the box. The dashboard auto-detects the data source and shows the right view.' },
-      { q: 'Can I query the data with SQL?', a: 'Yes. Run <code>mysql -h 127.0.0.1 -P 14002</code> to connect to the local SQL endpoint, or open <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> for the built-in query UI. Raw traces are in <code>opentelemetry_traces</code>, logs in <code>opentelemetry_logs</code>, and native metric tables are auto-created from incoming OTel metrics.' },
+      { q: 'Which agents are supported?', a: 'Any agent that emits OpenTelemetry data. Claude Code sends metrics and logs. Codex sends logs and metrics, and session JSONL is auto-parsed for conversation replay. OpenClaw sends traces and metrics. Any OTel SDK app with GenAI semantic conventions works out of the box. The dashboard auto-detects the data source and shows the right view.' },
+      { q: 'Can I query the data with SQL?', a: 'Yes. Run <code>mysql -h 127.0.0.1 -P 14002</code> to connect to the local SQL endpoint, or open <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> for the built-in query UI. Traces are in <code>opentelemetry_traces</code>, logs in <code>opentelemetry_logs</code>, session data in <code>tma1_hook_events</code> and <code>tma1_messages</code>, and OTel metrics get auto-created tables.' },
       { q: 'How much disk space does it use?', a: 'It depends on traffic and conversation length. A typical setup uses a few hundred MB per month.' },
     ],
   },
@@ -115,15 +114,14 @@ export const zh: T = {
   ],
   features: {
     kicker: '\u529f\u80fd', title: '\u8f7b\u91cf\u53ef\u89c2\u6d4b',
-    desc: '\u56db\u4e2a\u4e13\u5c5e\u89c6\u56fe\u2014\u2014Claude Code\u3001Codex\u3001OpenClaw\u3001OTel GenAI\u2014\u2014\u6839\u636e\u6570\u636e\u81ea\u52a8\u8bc6\u522b\u3002\u4e0d\u9700\u8981 Grafana\uff0c\u4e0d\u9700\u8981\u4e91\u670d\u52a1\uff0c\u4e0d\u9700\u8981\u5199 YAML\u3002',
+    desc: 'Claude Code\u3001Codex\u3001OpenClaw\u3001OTel GenAI\u3001Sessions \u4e94\u4e2a\u89c6\u56fe\uff0c\u6839\u636e\u6570\u636e\u81ea\u52a8\u5207\u6362\u3002\u4e0d\u7528\u88c5 Grafana\uff0c\u4e0d\u7528\u4e91\u670d\u52a1\uff0c\u4e0d\u7528\u5199 YAML\u3002',
     cards: [
-      { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u54ea\u4e2a\u6a21\u578b\u6700\u8d35\uff1f\u54ea\u4e2a\u5bf9\u8bdd\u628a\u9884\u7b97\u70e7\u5149\u4e86\uff1f\u6309\u6a21\u578b\u8ffd\u8e2a token \u548c\u8d39\u7528\uff0c\u652f\u6301 burn rate \u9884\u6d4b\u548c\u7f13\u5b58\u6548\u7387\u5206\u6790\u3002' },
-      { num: '02', title: '\u4f1a\u8bdd\u56de\u653e', desc: '\u4f60\u7684 agent \u8dd1\u4e86 25 \u5206\u949f\uff0c4 \u4e2a turn\u3002\u53d1\u751f\u4e86\u4ec0\u4e48\uff1f\u5c55\u5f00\u4efb\u610f session \u67e5\u770b\u6bcf\u4e2a API \u8c03\u7528\u3001\u5de5\u5177\u51b3\u7b56\u548c\u7ed3\u679c\u2014\u2014\u5305\u542b\u6a21\u578b\u3001token\u3001\u8d39\u7528\u548c\u6bcf\u4e2a\u4e8b\u4ef6\u7684\u5ef6\u8fdf\u3002' },
-      { num: '03', title: '\u5de5\u5177\u5206\u6790', desc: 'Agent \u53d8\u6162\u4e86\uff0c\u662f\u6a21\u578b\u7684\u95ee\u9898\u8fd8\u662f\u5de5\u5177\u8c03\u7528\u7684\u95ee\u9898\uff1f\u6bcf\u4e2a\u5de5\u5177\u7684 p50\u3001p95 \u5ef6\u8fdf\uff0c\u52a0\u4e0a\u8c03\u7528\u6b21\u6570\u3001\u6210\u529f\u7387\u548c\u8d8b\u52bf\u56fe\u3002' },
-      { num: '04', title: '\u5b89\u5168\u76d1\u63a7', desc: '\u4f60\u7684 agent \u80fd\u8dd1 shell \u547d\u4ee4\u3001\u8bf7\u6c42\u5916\u90e8 URL\u3001\u88ab\u6ce8\u5165 prompt\u3002TMA1 \u5168\u90e8\u6807\u8bb0\u51fa\u6765\u3002\u540c\u65f6\u8ffd\u8e2a OpenClaw \u7684 webhook \u9519\u8bef\u548c\u5361\u4f4f\u7684 session\u3002' },
-      { num: '05', title: '\u5bf9\u8bdd\u56de\u653e', desc: '\u4f60\u7684 agent \u521a\u6539\u4e86 15 \u4e2a\u6587\u4ef6\u3002\u5b83\u5f53\u65f6\u5728\u60f3\u4ec0\u4e48\uff1f\u70b9\u5f00 trace \u770b\u5b8c\u6574\u5bf9\u8bdd\u2014\u2014\u6392\u67e5\u95ee\u9898\u6216\u5ba1\u8ba1 agent \u8f93\u51fa\u65f6\u5f88\u65b9\u4fbf\u3002' },
-      { num: '06', title: '\u5f02\u5e38\u68c0\u6d4b', desc: 'Agent \u5361\u5728\u91cd\u8bd5\u5faa\u73af\u91cc\u53ef\u4ee5\u70e7\u6389\u51e0\u767e\u5206\u7f8e\u5143\u3002TMA1 \u6807\u8bb0\u5f02\u5e38 token \u7528\u91cf\u3001\u9ad8\u9519\u8bef\u7387\u548c\u6162\u54cd\u5e94\uff0c\u5728\u8d39\u7528\u5806\u8d77\u6765\u4e4b\u524d\u53d1\u51fa\u8b66\u62a5\u3002' },
-      { num: '07', title: '\u5168\u6587\u641c\u7d22', desc: '\u641c\u6240\u6709\u4e1c\u897f\u3002\u6309\u6a21\u578b\u8fc7\u6ee4\u3001\u8ffd\u8e2a\u9519\u8bef\u6765\u6e90\uff0c\u6216\u6309\u5de5\u5177\u540d\u67e5\u627e\u3002' },
+      { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u54ea\u4e2a\u6a21\u578b\u6700\u8d35\uff1f\u54ea\u4e2a\u5bf9\u8bdd\u628a\u9884\u7b97\u70e7\u5149\u4e86\uff1f\u6309\u6a21\u578b\u8ffd\u8e2a token \u548c\u8d39\u7528\uff0c\u80fd\u770b burn rate \u8d8b\u52bf\u548c\u7f13\u5b58\u547d\u4e2d\u7387\u3002' },
+      { num: '02', title: '\u5f02\u5e38\u68c0\u6d4b', desc: 'Agent \u5361\u5728\u91cd\u8bd5\u5faa\u73af\u91cc\u53ef\u4ee5\u70e7\u6389\u51e0\u767e\u7f8e\u5143\u3002\u6bcf\u4e2a agent \u89c6\u56fe\u6709 Anomalies \u6807\u7b7e\u9875\uff0c\u70b9\u51fb\u4efb\u4f55\u4e00\u6761\u5f02\u5e38\u76f4\u63a5\u8df3\u5230\u90a3\u4e2a session\uff0c\u770b\u770b\u5230\u5e95\u54ea\u513f\u51fa\u4e86\u95ee\u9898\u3002' },
+      { num: '03', title: 'Sessions', desc: '\u4f60\u7684 agent \u8dd1\u4e86 25 \u5206\u949f\u3002\u53d1\u751f\u4e86\u4ec0\u4e48\uff1f\u6253\u5f00 session overlay\uff1a\u5de6\u8fb9\u662f\u6587\u4ef6\u6d3b\u52a8\u3001\u4e0a\u4e0b\u6587\u5206\u5e03\u3001API \u8c03\u7528\u660e\u7ec6\uff0c\u53f3\u8fb9\u662f\u5b8c\u6574\u65f6\u95f4\u7ebf\u3002\u6216\u8005\u6253\u5f00 live canvas\uff0c\u5b9e\u65f6\u770b agent \u5de5\u4f5c\u3002' },
+      { num: '04', title: '\u5de5\u5177\u5206\u6790', desc: 'Agent \u53d8\u6162\u4e86\uff0c\u662f\u6a21\u578b\u7684\u95ee\u9898\u8fd8\u662f\u5de5\u5177\u8c03\u7528\u7684\u95ee\u9898\uff1f\u6bcf\u4e2a\u5de5\u5177\u7684 p50\u3001p95 \u5ef6\u8fdf\uff0c\u8c03\u7528\u6b21\u6570\u3001\u6210\u529f\u7387\u3001\u8d8b\u52bf\u7ebf\u3002' },
+      { num: '05', title: '\u5b89\u5168\u76d1\u63a7', desc: '\u4f60\u7684 agent \u80fd\u8dd1 shell \u547d\u4ee4\u3001\u8bf7\u6c42\u5916\u90e8 URL\u3001\u88ab\u6ce8\u5165 prompt\u3002TMA1 \u5168\u90e8\u6807\u8bb0\u3002OpenClaw \u7684 webhook \u9519\u8bef\u548c\u5361\u6b7b\u7684 session \u4e5f\u4f1a\u8ffd\u8e2a\u3002' },
+      { num: '06', title: '\u5168\u6587\u641c\u7d22', desc: '\u5728 Sessions \u641c\u7d22\u6846\u8f93\u5165\u5173\u952e\u8bcd\uff0c\u6240\u6709 session \u7684\u5bf9\u8bdd\u548c\u5de5\u5177\u8c03\u7528\u90fd\u80fd\u641c\u5230\u3002\u70b9\u51fb\u7ed3\u679c\u76f4\u63a5\u8df3\u5230\u90a3\u4e2a\u4e8b\u4ef6\u3002' },
     ],
   },
   how: {
@@ -150,8 +148,8 @@ export const zh: T = {
   faq: {
     kicker: 'FAQ', title: '\u5e38\u89c1\u95ee\u9898',
     items: [
-      { q: '\u652f\u6301\u54ea\u4e9b agent\uff1f', a: '\u4efb\u4f55\u53d1\u9001 OpenTelemetry \u6570\u636e\u7684 agent\u3002Claude Code \u53d1\u9001 metrics \u548c logs\uff0cCodex \u53d1\u9001 logs \u548c traces\uff0c\u914d\u7f6e <code>otel.metrics_exporter</code> \u540e\u4e5f\u53ef\u4ee5\u53d1\u9001\u539f\u751f metrics\uff0cOpenClaw \u53d1\u9001 traces \u548c metrics\uff0c\u4efb\u4f55 GenAI \u8bed\u4e49\u89c4\u8303\u7684 OTel SDK \u5e94\u7528\u4e5f\u652f\u6301\u3002Dashboard \u81ea\u52a8\u68c0\u6d4b\u6570\u636e\u6e90\u5e76\u5c55\u793a\u5bf9\u5e94\u89c6\u56fe\u3002' },
-      { q: '\u80fd\u76f4\u63a5\u7528 SQL \u67e5\u5417\uff1f', a: '\u80fd\u3002\u8fd0\u884c <code>mysql -h 127.0.0.1 -P 14002</code> \u8fde\u63a5\u672c\u5730 SQL \u7aef\u53e3\uff0c\u6216\u6253\u5f00 <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> \u4f7f\u7528\u5185\u7f6e\u67e5\u8be2\u754c\u9762\u3002\u539f\u59cb traces \u5728 <code>opentelemetry_traces</code>\uff0clogs \u5728 <code>opentelemetry_logs</code>\uff0cOTel metrics \u4f1a\u81ea\u52a8\u521b\u8868\u5b58\u50a8\u3002' },
+      { q: '\u652f\u6301\u54ea\u4e9b agent\uff1f', a: '\u4efb\u4f55\u53d1\u9001 OpenTelemetry \u6570\u636e\u7684 agent\u3002Claude Code \u53d1\u9001 metrics \u548c logs\uff0cCodex \u53d1\u9001 logs \u548c metrics\uff0c\u4f1a\u8bdd JSONL \u81ea\u52a8\u89e3\u6790\u7528\u4e8e\u5bf9\u8bdd\u56de\u653e\uff0cOpenClaw \u53d1\u9001 traces \u548c metrics\uff0c\u4efb\u4f55 GenAI \u8bed\u4e49\u89c4\u8303\u7684 OTel SDK \u5e94\u7528\u4e5f\u652f\u6301\u3002Dashboard \u81ea\u52a8\u68c0\u6d4b\u6570\u636e\u6e90\u5e76\u5c55\u793a\u5bf9\u5e94\u89c6\u56fe\u3002' },
+      { q: '\u80fd\u76f4\u63a5\u7528 SQL \u67e5\u5417\uff1f', a: '\u80fd\u3002\u8fd0\u884c <code>mysql -h 127.0.0.1 -P 14002</code> \u8fde\u63a5\u672c\u5730 SQL \u7aef\u53e3\uff0c\u6216\u6253\u5f00 <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> \u4f7f\u7528\u5185\u7f6e\u67e5\u8be2\u754c\u9762\u3002Traces \u5728 <code>opentelemetry_traces</code>\uff0clogs \u5728 <code>opentelemetry_logs</code>\uff0csession \u6570\u636e\u5728 <code>tma1_hook_events</code> \u548c <code>tma1_messages</code>\uff0cOTel metrics \u81ea\u52a8\u5efa\u8868\u3002' },
       { q: '\u5927\u6982\u5360\u591a\u5c11\u78c1\u76d8\uff1f', a: '\u53d6\u51b3\u4e8e agent \u6d41\u91cf\u548c\u5bf9\u8bdd\u957f\u5ea6\u3002\u5e38\u89c1\u573a\u666f\u4e0b\uff0c\u6bcf\u6708\u5927\u7ea6\u51e0\u767e MB\u3002' },
     ],
   },
@@ -183,15 +181,14 @@ export const es: T = {
   ],
   features: {
     kicker: 'Funcionalidades', title: 'Observabilidad sin complicaciones',
-    desc: 'Cuatro vistas dedicadas \u2014 Claude Code, Codex, OpenClaw y OTel GenAI \u2014 detectadas autom\u00e1ticamente de tus datos. Sin Grafana, sin nube, sin YAML.',
+    desc: 'Cinco vistas para Claude Code, Codex, OpenClaw, OTel GenAI y Sessions. El dashboard elige la correcta seg\u00fan tus datos. Sin Grafana, sin nube, sin YAML.',
     cards: [
-      { num: '01', title: 'Desglose de costos', desc: '\u00bfQu\u00e9 modelo cuesta m\u00e1s? \u00bfQu\u00e9 conversaci\u00f3n quem\u00f3 tu presupuesto? Tokens y costo estimado por modelo, con proyecciones de burn rate y an\u00e1lisis de eficiencia de cach\u00e9.' },
-      { num: '02', title: 'Replay de sesiones', desc: 'Tu agente corri\u00f3 25 minutos en 4 turnos. \u00bfQu\u00e9 pas\u00f3? Explor\u00e1 cualquier sesi\u00f3n para ver cada llamada API, decisi\u00f3n de herramienta y resultado \u2014 con modelo, tokens, costo y latencia por evento.' },
-      { num: '03', title: 'An\u00e1lisis de herramientas', desc: 'Cuando tu agente se siente lento, \u00bfes el modelo o las herramientas? Percentiles p50 y p95 por herramienta, m\u00e1s conteos de llamadas, tasas de \u00e9xito y gr\u00e1ficos de tendencia.' },
-      { num: '04', title: 'Monitoreo de seguridad', desc: 'Tu agente puede ejecutar comandos shell, hacer fetches a URLs externas y recibir prompts inyectados. TMA1 marca todo. Adem\u00e1s rastrea errores de webhook y sesiones atascadas en OpenClaw.' },
-      { num: '05', title: 'Replay de conversaciones', desc: 'Tu agente acaba de editar 15 archivos. \u00bfQu\u00e9 estaba pensando? Hac\u00e9 clic en un trace para leer el di\u00e1logo completo \u2014 \u00fatil para depurar o auditar.' },
-      { num: '06', title: 'Detecci\u00f3n de anomal\u00edas', desc: 'Un agente atascado en un loop de reintentos puede quemar cientos de d\u00f3lares. TMA1 marca tokens inusuales, errores altos y respuestas lentas antes de que los costos se acumulen.' },
-      { num: '07', title: 'B\u00fasqueda de texto completo', desc: 'Busc\u00e1 todo. Filtr\u00e1 por modelo, rastre\u00e1 un error hasta la llamada original, o busc\u00e1 por nombre de herramienta.' },
+      { num: '01', title: 'Desglose de costos', desc: '\u00bfQu\u00e9 modelo cuesta m\u00e1s? \u00bfQu\u00e9 conversaci\u00f3n quem\u00f3 tu presupuesto? Tokens y costo estimado por modelo, m\u00e1s burn rate y ratios de cache hit.' },
+      { num: '02', title: 'Detecci\u00f3n de anomal\u00edas', desc: 'Un agente en un loop de reintentos puede quemar cientos de d\u00f3lares. Cada vista de agente tiene una pesta\u00f1a Anomalies. Hac\u00e9 clic en cualquiera para saltar a esa sesi\u00f3n y ver qu\u00e9 sali\u00f3 mal.' },
+      { num: '03', title: 'Sessions', desc: 'Tu agente corri\u00f3 25 minutos. \u00bfQu\u00e9 pas\u00f3? Abr\u00ed el overlay de sesi\u00f3n: a la izquierda la actividad de archivos, contexto y API calls. A la derecha, el timeline completo. O mir\u00e1 el canvas en vivo mientras tu agente trabaja.' },
+      { num: '04', title: 'An\u00e1lisis de herramientas', desc: 'Cuando tu agente se siente lento, \u00bfes el modelo o las herramientas? p50 y p95 de latencia por herramienta, conteos de llamadas, tasas de \u00e9xito y l\u00edneas de tendencia.' },
+      { num: '05', title: 'Monitoreo de seguridad', desc: 'Tu agente puede ejecutar comandos shell, hacer fetches a URLs externas y recibir prompts inyectados. TMA1 marca todo. Para OpenClaw tambi\u00e9n rastrea errores de webhook y sesiones atascadas.' },
+      { num: '06', title: 'B\u00fasqueda de texto completo', desc: 'Escrib\u00ed una palabra clave en la pesta\u00f1a de b\u00fasqueda de Sessions y aparecen las conversaciones, herramientas y resultados que coinciden. Hac\u00e9 clic en un resultado para abrir la sesi\u00f3n en ese evento exacto.' },
     ],
   },
   how: {
@@ -218,8 +215,8 @@ export const es: T = {
   faq: {
     kicker: 'FAQ', title: 'Preguntas frecuentes',
     items: [
-      { q: '\u00bfQu\u00e9 agentes soporta?', a: 'Cualquier agente que emita datos OpenTelemetry. Claude Code env\u00eda m\u00e9tricas y logs. Codex env\u00eda logs y traces, y tambi\u00e9n puede emitir m\u00e9tricas nativas cuando se configura <code>otel.metrics_exporter</code>. OpenClaw env\u00eda traces y m\u00e9tricas. Cualquier SDK OTel con convenciones sem\u00e1nticas GenAI funciona de entrada. El dashboard detecta autom\u00e1ticamente la fuente de datos y muestra la vista correspondiente.' },
-      { q: '\u00bfSe pueden consultar los datos con SQL?', a: 'S\u00ed. Ejecut\u00e1 <code>mysql -h 127.0.0.1 -P 14002</code> para conectarte al endpoint SQL local, o abr\u00ed <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> para usar la interfaz de consultas integrada. Los traces crudos est\u00e1n en <code>opentelemetry_traces</code>, los logs en <code>opentelemetry_logs</code>, y las m\u00e9tricas OTel se guardan en tablas nativas creadas autom\u00e1ticamente.' },
+      { q: '\u00bfQu\u00e9 agentes soporta?', a: 'Cualquier agente que emita datos OpenTelemetry. Claude Code env\u00eda m\u00e9tricas y logs. Codex env\u00eda logs y m\u00e9tricas, y los archivos JSONL de sesi\u00f3n se analizan autom\u00e1ticamente para la reproducci\u00f3n de conversaciones. OpenClaw env\u00eda traces y m\u00e9tricas. Cualquier SDK OTel con convenciones sem\u00e1nticas GenAI funciona de entrada. El dashboard detecta autom\u00e1ticamente la fuente de datos y muestra la vista correspondiente.' },
+      { q: '\u00bfSe pueden consultar los datos con SQL?', a: 'S\u00ed. Ejecut\u00e1 <code>mysql -h 127.0.0.1 -P 14002</code> para conectarte al endpoint SQL local, o abr\u00ed <code><a href="http://localhost:14000/dashboard/">localhost:14000/dashboard/</a></code> para la interfaz de consultas. Traces en <code>opentelemetry_traces</code>, logs en <code>opentelemetry_logs</code>, datos de sesi\u00f3n en <code>tma1_hook_events</code> y <code>tma1_messages</code>, y las m\u00e9tricas OTel crean tablas autom\u00e1ticamente.' },
       { q: '\u00bfCu\u00e1nto disco ocupa?', a: 'Depende de la actividad del agente y del largo de las conversaciones. En un uso t\u00edpico, unos cientos de MB por mes.' },
     ],
   },
