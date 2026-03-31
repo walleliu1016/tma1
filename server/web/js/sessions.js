@@ -965,6 +965,12 @@ function sess_renderWaterfall(timeline, stats) {
       sessionEnd = Math.max(sessionEnd, timeline[i].data.end_ts);
     }
   }
+  // Extend sessionEnd to include API call spans.
+  var apiCalls = stats.apiCalls || [];
+  for (var ci = 0; ci < apiCalls.length; ci++) {
+    var cEnd = (apiCalls[ci].ts || 0) + (apiCalls[ci].durationMs || 0);
+    if (cEnd > sessionEnd) sessionEnd = cEnd;
+  }
   var totalMs = Math.max(sessionEnd - sessionStart, 1);
 
   // 1. Build subagent spans from hookEvents in timeline.
@@ -1004,20 +1010,16 @@ function sess_renderWaterfall(timeline, stats) {
   }
 
   // Add API calls as LLM spans.
-  var apiCalls = stats.apiCalls || [];
-  for (var ci = 0; ci < apiCalls.length; ci++) {
-    var c = apiCalls[ci];
+  for (var ci2 = 0; ci2 < apiCalls.length; ci2++) {
+    var c = apiCalls[ci2];
     var cTs = c.ts || 0;
     var cDur = c.durationMs || 0;
-    var cEnd = cTs + cDur;
-    if (cEnd > sessionEnd) sessionEnd = cEnd;
     spans.push({
-      id: 'api_' + ci, parentId: 'root',
+      id: 'api_' + ci2, parentId: 'root',
       name: (c.model || 'LLM').replace(/^claude-/, '').replace(/-\d{8}$/, ''),
-      spanType: 'llm', start_ts: cTs, end_ts: cEnd, data: c
+      spanType: 'llm', start_ts: cTs, end_ts: cTs + cDur, data: c
     });
   }
-  totalMs = Math.max(sessionEnd - sessionStart, 1);
 
   // 3. Build tree via byId map + DFS.
   var byId = { root: { children: [] } };

@@ -31,6 +31,9 @@ type Server struct {
 
 // New creates a new Server.
 func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher, bc *HookBroadcaster) *Server {
+	if bc == nil {
+		bc = NewHookBroadcaster()
+	}
 	return &Server{
 		greptimeHTTPPort:  greptimeHTTPPort,
 		tma1Port:          tma1Port,

@@ -130,10 +130,14 @@ func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
 	}
 	tmpPath := tmp.Name()
 
-	if _, err := tmp.Write(data); err != nil {
+	if n, err := tmp.Write(data); err != nil {
 		tmp.Close()
 		os.Remove(tmpPath)
 		return fmt.Errorf("write temp file: %w", err)
+	} else if n != len(data) {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("write temp file: short write: wrote %d of %d bytes", n, len(data))
 	}
 	if err := tmp.Sync(); err != nil {
 		tmp.Close()
