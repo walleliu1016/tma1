@@ -42,9 +42,17 @@ function makeUPlotOpts(title, series, width, yFormatter) {
   };
 }
 
-function renderChart(containerId, data, seriesDefs, yFmt) {
+function parseBucketSeconds(bucketStr) {
+  var m = bucketStr.match(/^(\d+)\s+(minute|hour)/);
+  if (!m) return 300;
+  var n = Number(m[1]);
+  return m[2] === 'hour' ? n * 3600 : n * 60;
+}
+
+function renderChart(containerId, data, seriesDefs, yFmt, onClickBucket) {
   var container = document.getElementById(containerId);
   container.innerHTML = '';
+  if (onClickBucket) closeCostDrilldown();
 
   function doRender() {
     var baseWidth = container.clientWidth ||
@@ -86,6 +94,20 @@ function renderChart(containerId, data, seriesDefs, yFmt) {
     } catch (err) {
       console.error('chart render failed', containerId, err);
       container.innerHTML = '<div class="chart-empty">' + t('error.render_chart') + '</div>';
+      return;
+    }
+
+    if (onClickBucket) {
+      container.style.cursor = 'pointer';
+      var cc = container.closest('.chart-container');
+      if (cc) cc.classList.add('chart-clickable');
+      chartInstances[containerId].over.addEventListener('click', function() {
+        var idx = chartInstances[containerId].cursor.idx;
+        if (idx == null) return;
+        var tsSec = uData[0][idx];
+        var bucketSec = parseBucketSeconds(chartBucket());
+        onClickBucket(container, tsSec, bucketSec);
+      });
     }
   }
 
