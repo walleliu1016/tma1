@@ -13,6 +13,7 @@ var sessHasNext = false;
 var sessExpandedId = null;
 var sessTimelineData = [];
 var sessCurrentStats = null;
+var sessDetailVersion = 0;
 
 // Stable colors for tool names in gantt.
 var GANTT_COLORS = ['#79c0ff', '#f0883e', '#57cb8e', '#d2a9ff', '#f85149', '#e5bd57', '#79c0ff', '#ff7b72'];
@@ -205,6 +206,7 @@ function sess_openDetail(sessionId, agentSource, targetTs, apiCallFP) {
   var content = document.getElementById('sess-detail-content');
   content.innerHTML = '<div class="loading" style="padding:40px;text-align:center">' + t('empty.loading') + '</div>';
   overlay.style.display = 'flex';
+  document.removeEventListener('keydown', sess_escHandler);
   document.addEventListener('keydown', sess_escHandler);
   sess_loadDetail(sessionId, agentSource || '');
 }
@@ -239,6 +241,7 @@ function sess_toggleErrors() {
 // ── Load Detail Data ──────────────────────────────────────────────────
 
 async function sess_loadDetail(sessionId, agentSource) {
+  var myVersion = ++sessDetailVersion;
   var sid = escapeSQLString(sessionId);
 
   // Phase 1: hook events + messages (always available).
@@ -255,6 +258,8 @@ async function sess_loadDetail(sessionId, agentSource) {
       "FROM tma1_messages WHERE session_id = '" + sid + "' ORDER BY ts ASC"
     ).catch(function() { return null; }),
   ]);
+
+  if (myVersion !== sessDetailVersion) return; // stale request
 
   var hookEvents = rowsToObjects(results[0]);
   var messages = results[1] ? rowsToObjects(results[1]) : [];
@@ -307,6 +312,7 @@ async function sess_loadDetail(sessionId, agentSource) {
   }
   timeline.sort(function(a, b) { return a.ts - b.ts; });
 
+  if (myVersion !== sessDetailVersion) return; // stale request
   sessTimelineData = timeline;
   await loadPricing();
 
@@ -354,6 +360,7 @@ async function sess_loadDetail(sessionId, agentSource) {
     } catch (e) { /* enrichment data not available */ }
   }
 
+  if (myVersion !== sessDetailVersion) return; // stale request
   sessCurrentStats = sess_computeStats(hookEvents, messages, timeline, apiCalls, apiErrors);
   renderSessionDetail(timeline, sessCurrentStats);
 }
@@ -823,7 +830,7 @@ function sess_renderAPICalls(stats) {
     var clickAction = tuids
       ? 'sess_scrollToToolUseId(\x27' + escapeJSString(tuids.split(',')[0]) + '\x27)'
       : 'sess_scrollToEvent(document.getElementById(\x27sess-timeline-scroll\x27),' + (c.ts || 0) + ')';
-    html += '<tr class="clickable" data-ts="' + (c.ts || 0) + '" data-fp="' + escapeHTML(apiKey) + '" data-tool-use-ids="' + escapeHTML(tuids) + '" onclick="' + clickAction + '">';
+    html += '<tr class="clickable" data-ts="' + (c.ts || 0) + '" data-fp="' + escapeHTML(apiKey) + '" data-tool-use-ids="' + escapeHTML(tuids) + '" onclick="' + escapeHTML(clickAction) + '">';
     html += '<td style="text-align:left;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHTML(c.model || '') + '">' + escapeHTML(modelShort) + '</td>';
     html += '<td>' + fmtTokens(c.inputTokens) + '</td>';
     html += '<td>' + fmtTokens(c.outputTokens) + '</td>';

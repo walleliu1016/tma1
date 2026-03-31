@@ -3,32 +3,120 @@ package greptimedb
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 const defaultConfigFileName = "standalone.toml"
 
+// currentConfigVersion is bumped whenever standalone-default.toml changes
+// in a way that existing user configs should be migrated.
+const currentConfigVersion = 2
+
 //go:embed standalone-default.toml
 var defaultConfig []byte
 
-func ensureDefaultConfigFile(dataDir string) (string, error) {
+// configMigration describes a single version upgrade step.
+type configMigration struct {
+	version int                  // target version after this migration
+	apply   func([]byte) []byte // transform config content
+}
+
+// configMigrations is the ordered list of upgrade steps.
+// Each entry upgrades from version N-1 to N.
+var configMigrations = []configMigration{
+	{2, migrateV1ToV2},
+}
+
+// migrateV1ToV2 raises memory limits from 128MB to 512MB.
+// Uses exact string replacement so user-customized values are preserved.
+func migrateV1ToV2(data []byte) []byte {
+	s := string(data)
+	s = strings.Replace(s, `memory_pool_size = "128MB"`, `memory_pool_size = "512MB"`, 1)
+	s = strings.Replace(s, `scan_memory_limit = "128MB"`, `scan_memory_limit = "512MB"`, 1)
+	return []byte(s)
+}
+
+// configVersion extracts the version number from a "# tma1-config-version: N" comment.
+// Returns 1 if no version line is found (pre-versioning configs).
+func configVersion(content []byte) int {
+	firstLine, _, _ := strings.Cut(string(content), "\n")
+	const prefix = "# tma1-config-version: "
+	if strings.HasPrefix(firstLine, prefix) {
+		if v, err := strconv.Atoi(strings.TrimSpace(firstLine[len(prefix):])); err == nil && v > 0 {
+			return v
+		}
+	}
+	return 1
+}
+
+// setConfigVersion inserts or updates the version comment at the top of the config.
+func setConfigVersion(data []byte, version int) []byte {
+	s := string(data)
+	versionLine := fmt.Sprintf("# tma1-config-version: %d\n", version)
+
+	const prefix = "# tma1-config-version: "
+	if strings.HasPrefix(s, prefix) {
+		// Replace existing version line.
+		idx := strings.IndexByte(s, '\n')
+		if idx >= 0 {
+			return []byte(versionLine + s[idx+1:])
+		}
+		// Version line is the entire file (no newline) — just replace it.
+		return []byte(versionLine)
+	}
+	// Prepend version line.
+	return []byte(versionLine + s)
+}
+
+func ensureDefaultConfigFile(dataDir string, logger *slog.Logger) (string, error) {
 	configDir := filepath.Join(dataDir, "config")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", fmt.Errorf("greptimedb: create config dir: %w", err)
 	}
 
 	configPath := filepath.Join(configDir, defaultConfigFileName)
-	if _, err := os.Stat(configPath); err == nil {
+
+	// Fresh install: write default config.
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		if err := os.WriteFile(configPath, defaultConfig, 0o644); err != nil {
+			return "", fmt.Errorf("greptimedb: write default config: %w", err)
+		}
 		return configPath, nil
-	} else if !os.IsNotExist(err) {
+	} else if err != nil {
 		return "", fmt.Errorf("greptimedb: stat config file: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, defaultConfig, 0o644); err != nil {
-		return "", fmt.Errorf("greptimedb: write default config: %w", err)
+	// Existing config: check version and apply migrations if needed.
+	content, err := os.ReadFile(configPath) //nolint:gosec
+	if err != nil {
+		logger.Warn("greptimedb: cannot read config for migration, using as-is", "error", err)
+		return configPath, nil
 	}
 
+	oldVersion := configVersion(content)
+	if oldVersion >= currentConfigVersion {
+		return configPath, nil
+	}
+
+	// Apply migrations sequentially.
+	migrated := content
+	for _, m := range configMigrations {
+		if m.version > oldVersion {
+			migrated = m.apply(migrated)
+		}
+	}
+	migrated = setConfigVersion(migrated, currentConfigVersion)
+
+	if err := os.WriteFile(configPath, migrated, 0o644); err != nil {
+		logger.Warn("greptimedb: config migration write failed, using old config", "error", err)
+		return configPath, nil
+	}
+
+	logger.Info("greptimedb: config upgraded", "from", oldVersion, "to", currentConfigVersion)
 	return configPath, nil
 }
 

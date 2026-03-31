@@ -31,7 +31,8 @@ type Server struct {
 
 // New creates a new Server.
 func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher) *Server {
-	return &Server{
+	bc := newHookBroadcaster()
+	s := &Server{
 		greptimeHTTPPort:  greptimeHTTPPort,
 		tma1Port:          tma1Port,
 		logger:            logger,
@@ -39,8 +40,13 @@ func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *s
 		httpClient:        &http.Client{Timeout: 30 * time.Second},
 		otlpClient:        &http.Client{Timeout: 60 * time.Second},
 		transcriptWatcher: tw,
-		hookBroadcast:     newHookBroadcaster(),
+		hookBroadcast:     bc,
 	}
+	// Wire broadcast so transcript watchers (Codex) can push events to SSE subscribers.
+	if tw != nil {
+		tw.SetBroadcast(bc.Broadcast)
+	}
+	return s
 }
 
 // Router returns the chi router with all routes registered.

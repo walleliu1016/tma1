@@ -35,12 +35,16 @@ const (
 // to prevent overwhelming GreptimeDB when backfilling large transcripts.
 var insertSem = make(chan struct{}, 16)
 
+// BroadcastFunc is called to fan out hook events to SSE subscribers.
+type BroadcastFunc func(data []byte)
+
 // Watcher manages per-session JSONL transcript file watchers.
 type Watcher struct {
-	mu       sync.Mutex
-	sessions map[string]*sessionWatch
-	sqlURL   string
-	logger   *slog.Logger
+	mu        sync.Mutex
+	sessions  map[string]*sessionWatch
+	sqlURL    string
+	logger    *slog.Logger
+	broadcast BroadcastFunc
 }
 
 type sessionWatch struct {
@@ -56,6 +60,11 @@ func NewWatcher(greptimeHTTPPort int, logger *slog.Logger) *Watcher {
 		sqlURL:   fmt.Sprintf("http://localhost:%d/v1/sql", greptimeHTTPPort),
 		logger:   logger,
 	}
+}
+
+// SetBroadcast sets the callback used to fan out hook events to SSE subscribers.
+func (w *Watcher) SetBroadcast(fn BroadcastFunc) {
+	w.broadcast = fn
 }
 
 // Watch starts tailing a JSONL transcript file for the given session.
@@ -441,4 +450,27 @@ func truncate(s string, maxLen int) string {
 
 func escapeSQLString(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
+}
+
+// broadcastHookEvent sends a hook-compatible JSON payload to SSE subscribers.
+// Fields match the Claude Code hook schema so the live canvas can process them uniformly.
+func (w *Watcher) broadcastHookEvent(sessionID, eventType, toolName, toolInput, toolUseID, toolResult, agentID, agentType string) {
+	if w.broadcast == nil {
+		return
+	}
+	payload := map[string]string{
+		"session_id":      sessionID,
+		"hook_event_name": eventType,
+		"tool_name":       toolName,
+		"tool_input":      toolInput,
+		"tool_use_id":     toolUseID,
+		"tool_response":   toolResult,
+		"agent_id":        agentID,
+		"agent_type":      agentType,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	w.broadcast(data)
 }
