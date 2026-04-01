@@ -80,7 +80,7 @@ TMA1 captures different data depending on the agent:
 
 | Agent | Data path | What it captures |
 | --- | --- | --- |
-| **Claude Code** | OTel metrics + logs + hooks | Token usage, cost, active time, tool decisions, API requests, user prompts, session conversations |
+| **Claude Code** | OTel metrics + logs + traces + hooks | Token usage, cost, active time, tool decisions, API requests, TTFT, tool timing, permission waits, user prompts, session conversations |
 | **Codex** | OTel logs + metrics + session JSONL | User prompts, LLM calls, tool executions, token usage, session conversations |
 | **OpenClaw** | OTel traces + metrics | LLM calls (model, tokens, cache), messages, webhooks, sessions, queue depth |
 | **Other (GenAI SDK)** | OTel traces + logs | Token usage, cost, latency, conversation replay, prompt injection detection (GenAI semantic conventions) |
