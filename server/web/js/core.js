@@ -183,10 +183,10 @@ function costCaseSQL(modelExpr, inputExpr, outputExpr) {
 
 function setHealthFromData(el, data, thresholds) {
   var th = thresholds || {};
-  var p95Red = th.p95Red || 5000;
-  var p95Yellow = th.p95Yellow || 2000;
-  var errRed = th.errRed || 5;
-  var errYellow = th.errYellow || 1;
+  var p95Red = (th.p95Red != null) ? th.p95Red : 5000;
+  var p95Yellow = (th.p95Yellow != null) ? th.p95Yellow : 2000;
+  var errRed = (th.errRed != null) ? th.errRed : 5;
+  var errYellow = (th.errYellow != null) ? th.errYellow : 1;
   var total = Number(data.total) || 0;
   var errors = Number(data.errors) || 0;
   var p95 = Number(data.p95_ms) || 0;

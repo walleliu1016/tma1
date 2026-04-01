@@ -404,9 +404,9 @@ Force reinstall (wipes all data): curl -fsSL https://tma1.ai/install.sh | TMA1_F
 
 ### Dashboard shows "Unhealthy" but error rate is 0%
 
-The health indicator uses default latency thresholds designed for general API calls (p95 > 5s = unhealthy). LLM calls routinely take 10–30+ seconds, so this is expected behavior for OpenClaw and GenAI workloads.
+By default, generic API services use latency thresholds where p95 > 2s is yellow and p95 > 5s is red (unhealthy). For OpenClaw, `oc_updateHealthIndicator()` overrides these defaults to p95 > 10s (yellow) and p95 > 30s (red) to better match typical LLM/agent call durations.
 
-**What to check:** Focus on the error rate, not latency color. If error rate is 0% and your requests are completing successfully, the service is healthy — the latency indicator is simply not calibrated for LLM call durations.
+**What to check:** Focus on the error rate, not latency color. If error rate is 0% and your requests are completing successfully, the service is healthy — long-running LLM calls can still exceed the configured latency thresholds even when the system is functioning as expected.
 
 ### OpenClaw — Frequent "session.stuck" warnings
 
