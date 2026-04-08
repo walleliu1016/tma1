@@ -35,6 +35,15 @@ type Config struct {
 
 	// DataTTL is the default TTL for auto-created tables (e.g. "60d", "30d").
 	DataTTL string
+
+	// LLMAPIKey is the API key for the LLM provider (optional, enables prompt evaluation).
+	LLMAPIKey string
+
+	// LLMProvider is the LLM provider: "anthropic" or "openai" (default "anthropic").
+	LLMProvider string
+
+	// LLMModel overrides the default model for the LLM provider.
+	LLMModel string
 }
 
 // Load reads config from environment variables, with sensible defaults.
@@ -54,6 +63,9 @@ func Load() (*Config, error) {
 		GreptimeDBMySQLPort: envInt("TMA1_GREPTIMEDB_MYSQL_PORT", 14002),
 		LogLevel:            env("TMA1_LOG_LEVEL", "info"),
 		DataTTL:             env("TMA1_DATA_TTL", "60d"),
+		LLMAPIKey:           env("TMA1_LLM_API_KEY", ""),
+		LLMProvider:         env("TMA1_LLM_PROVIDER", "anthropic"),
+		LLMModel:            env("TMA1_LLM_MODEL", ""),
 	}
 
 	return cfg, nil

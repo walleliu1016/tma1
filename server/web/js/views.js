@@ -2,7 +2,7 @@
 // Depends on: core.js, chart.js, i18n.js, traces.js, claude-code.js, codex.js, openclaw.js, sessions.js, agent-canvas.js
 // Must be loaded LAST. Calls initViews() at the bottom.
 
-var currentView = null; // 'claude-code', 'codex', 'openclaw', 'traces', or 'sessions'
+var currentView = null; // 'claude-code', 'codex', 'openclaw', 'traces', 'sessions', or 'prompts'
 var autoRefreshTimer = null;
 var refreshInFlight = false;
 var dataSources = {
@@ -15,6 +15,7 @@ var dataSources = {
   ccMetrics: [],
   codexMetrics: [],
   hasHookEvents: false,
+  hasMessages: false,
 };
 
 async function detectDataSources() {
@@ -34,6 +35,7 @@ async function detectDataSources() {
       codexMetrics: tables.filter(function(t) { return t.startsWith('codex_'); }),
       ocMetrics: tables.filter(function(t) { return t.startsWith('openclaw_'); }),
       hasHookEvents: tables.includes('tma1_hook_events'),
+      hasMessages: tables.includes('tma1_messages'),
     };
     result.hasCodex = result.codexMetrics.length > 0;
     result.hasOpenClaw = result.ocMetrics.length > 0;
@@ -119,6 +121,10 @@ function updateHash() {
     } else if (sessTabName && sessTabName !== 'sess-list') {
       hash += '/' + sessTabName;
     }
+  } else if (currentView === 'prompts') {
+    var prTab = document.querySelector('#pr-tabs .tab.active');
+    var prTabName = prTab ? prTab.dataset.prtab : null;
+    if (prTabName && prTabName !== 'pr-overview') hash += '/' + prTabName;
   } else if (currentView === 'traces') {
     var tab2 = document.querySelector('#view-traces .tab.active');
     var tabName2 = tab2 ? tab2.dataset.tab : null;
@@ -149,6 +155,7 @@ async function switchView(viewId, skipHash) {
   document.getElementById('view-openclaw').style.display = 'none';
   document.getElementById('view-traces').style.display = 'none';
   document.getElementById('view-sessions').style.display = 'none';
+  document.getElementById('view-prompts').style.display = 'none';
   document.getElementById('setup-notice').style.display = 'none';
 
   currentView = viewId;
@@ -174,6 +181,10 @@ async function switchView(viewId, skipHash) {
     } else if (viewId === 'sessions') {
       hasData = await sess_loadCards();
       if (hasData) sess_loadList();
+    } else if (viewId === 'prompts') {
+      hasData = await pr_loadCards();
+      await pr_checkLLM();
+      if (hasData) pr_loadOverview();
     } else if (viewId === 'traces') {
       await loadPricing();
       hasData = await loadMetrics();
@@ -201,6 +212,7 @@ async function initViews() {
   if (dataSources.hasOpenClaw) views.push({ id: 'openclaw', label: t('view.openclaw') });
   if (dataSources.hasGenAITraces) views.push({ id: 'traces', label: t('view.otel_genai') });
   if (dataSources.hasHookEvents) views.push({ id: 'sessions', label: t('view.sessions') });
+  if (dataSources.hasMessages) views.push({ id: 'prompts', label: t('view.prompts') });
 
   if (views.length === 0) {
     document.getElementById('setup-notice').style.display = 'block';
@@ -246,6 +258,9 @@ async function initViews() {
       if (hash.sessionId) {
         sess_openDetail(decodeURIComponent(hash.sessionId), '', 0, '', true);
       }
+    } else if (targetView === 'prompts') {
+      var tabBtnPr = document.querySelector('#pr-tabs .tab[data-prtab="' + hash.tab + '"]');
+      if (tabBtnPr) tabBtnPr.click();
     } else if (targetView === 'traces') {
       var tabBtn2 = document.querySelector('#view-traces .tab[data-tab="' + hash.tab + '"]');
       if (tabBtn2) tabBtn2.click();
@@ -318,6 +333,18 @@ document.querySelectorAll('#sess-tabs .tab').forEach(function(btn) {
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.sesstab).classList.add('active');
     sess_onTabChange(btn.dataset.sesstab);
+    updateHash();
+  });
+});
+
+// Tab navigation (Prompts view)
+document.querySelectorAll('#pr-tabs .tab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#pr-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('#view-prompts .tab-content').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.prtab).classList.add('active');
+    pr_onTabChange(btn.dataset.prtab);
     updateHash();
   });
 });
@@ -406,6 +433,12 @@ async function refreshCurrentView() {
       var activeSessTab = document.querySelector('#sess-tabs .tab.active');
       if (activeSessTab) sess_onTabChange(activeSessTab.dataset.sesstab);
     }
+  } else if (currentView === 'prompts') {
+    hasData = await pr_loadCards();
+    if (hasData) {
+      var activePrTab = document.querySelector('#pr-tabs .tab.active');
+      if (activePrTab) pr_onTabChange(activePrTab.dataset.prtab);
+    }
   }
   var viewEl = document.getElementById('view-' + currentView);
   var setupEl = document.getElementById('setup-notice');
@@ -478,6 +511,8 @@ async function checkDataFreshness() {
     sql = "SELECT MAX(timestamp) AS last_ts FROM opentelemetry_traces WHERE span_name LIKE 'openclaw.%'";
   } else if (currentView === 'sessions') {
     sql = "SELECT MAX(ts) AS last_ts FROM tma1_hook_events";
+  } else if (currentView === 'prompts') {
+    sql = "SELECT MAX(ts) AS last_ts FROM tma1_messages WHERE message_type = 'user'";
   } else if (currentView === 'traces') {
     var cols = await genai_getTraceColumns();
     sql = "SELECT MAX(timestamp) AS last_ts FROM opentelemetry_traces WHERE " + genaiSpanWhere(cols);
@@ -559,6 +594,8 @@ function setTheme(mode) {
     cdx_loadOverview();
   } else if (currentView === 'openclaw') {
     oc_loadOverview();
+  } else if (currentView === 'prompts') {
+    pr_loadOverview();
   } else if (currentView === 'traces') {
     loadOverviewCharts();
   }
@@ -580,6 +617,157 @@ function initTheme() {
 }
 
 // ===================================================================
+// Settings modal
+// ===================================================================
+
+async function openSettings() {
+  document.getElementById('settings-overlay').style.display = 'flex';
+  settingsKeyCleared = false;
+
+  // Sync browser preferences into modal.
+  var saved = localStorage.getItem('tma1-theme') || 'dark';
+  document.querySelectorAll('#settings-theme button').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.theme === saved);
+  });
+  var lang = localStorage.getItem('tma1-locale') || 'en';
+  document.querySelectorAll('#settings-lang button').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  document.getElementById('settings-time-range').value = currentTimeRange;
+  document.getElementById('settings-auto-refresh').value = document.getElementById('auto-refresh').value;
+
+  // Load server settings.
+  try {
+    var resp = await fetch('/api/settings');
+    var data = await resp.json();
+    document.getElementById('settings-llm-key').value = '';
+    document.getElementById('settings-llm-key').type = 'password';
+    document.getElementById('settings-llm-key').placeholder = data.llm_api_key_set ? data.llm_api_key_hint : 'sk-...';
+    document.getElementById('settings-clear-key').style.display = data.llm_api_key_set ? '' : 'none';
+    document.getElementById('settings-llm-provider').value = data.llm_provider || 'anthropic';
+    document.getElementById('settings-llm-model').value = data.llm_model || '';
+    document.getElementById('settings-log-level').value = data.log_level || 'info';
+    document.getElementById('settings-data-ttl').value = data.data_ttl || '60d';
+
+    // Show env lock badges.
+    var overrides = data.env_overrides || [];
+    var envMap = {
+      'llm_api_key': 'settings-env-key',
+      'llm_provider': 'settings-env-provider',
+      'llm_model': 'settings-env-model',
+      'log_level': 'settings-env-log',
+      'data_ttl': 'settings-env-ttl',
+    };
+    Object.keys(envMap).forEach(function(key) {
+      var badge = document.getElementById(envMap[key]);
+      var locked = overrides.indexOf(key) !== -1;
+      badge.style.display = locked ? '' : 'none';
+    });
+    // Disable locked inputs.
+    document.getElementById('settings-llm-key').disabled = overrides.indexOf('llm_api_key') !== -1;
+    document.getElementById('settings-llm-provider').disabled = overrides.indexOf('llm_provider') !== -1;
+    document.getElementById('settings-llm-model').disabled = overrides.indexOf('llm_model') !== -1;
+    document.getElementById('settings-log-level').disabled = overrides.indexOf('log_level') !== -1;
+    document.getElementById('settings-data-ttl').disabled = overrides.indexOf('data_ttl') !== -1;
+  } catch (e) { /* ignore */ }
+
+  // GreptimeDB status.
+  try {
+    var statusResp = await fetch('/status');
+    var statusData = await statusResp.json();
+    var dot = document.getElementById('settings-gdb-dot');
+    var label = document.getElementById('settings-gdb-status');
+    if (statusData.greptimedb === 'running') {
+      dot.classList.remove('offline');
+      label.textContent = 'Running';
+      label.style.color = 'var(--green)';
+    } else {
+      dot.classList.add('offline');
+      label.textContent = statusData.greptimedb || 'Unreachable';
+      label.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    document.getElementById('settings-gdb-dot').classList.add('offline');
+    document.getElementById('settings-gdb-status').textContent = 'Unreachable';
+  }
+
+  document.getElementById('settings-status').textContent = '';
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').style.display = 'none';
+}
+
+async function saveSettings() {
+  var btn = document.getElementById('settings-save-btn');
+  var status = document.getElementById('settings-status');
+  btn.disabled = true;
+  status.textContent = '';
+
+  var keyValue = document.getElementById('settings-llm-key').value || '';
+  if (settingsKeyCleared && keyValue === '') keyValue = '__clear__';
+
+  var payload = {
+    llm_api_key: keyValue,
+    llm_provider: document.getElementById('settings-llm-provider').value,
+    llm_model: document.getElementById('settings-llm-model').value,
+    log_level: document.getElementById('settings-log-level').value,
+    data_ttl: document.getElementById('settings-data-ttl').value,
+  };
+
+  try {
+    var resp = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    var data = await resp.json();
+    if (data.error) {
+      status.textContent = data.error;
+      status.style.color = 'var(--red)';
+    } else {
+      status.textContent = t('settings.saved');
+      status.style.color = 'var(--green)';
+      // Update LLM availability for Prompts view.
+      prLLMAvailable = data.llm_api_key_set;
+      settingsKeyCleared = false;
+      // Update placeholder and clear button.
+      document.getElementById('settings-llm-key').value = '';
+      document.getElementById('settings-llm-key').type = 'password';
+      document.getElementById('settings-llm-key').placeholder = data.llm_api_key_set ? data.llm_api_key_hint : 'sk-...';
+      document.getElementById('settings-clear-key').style.display = data.llm_api_key_set ? '' : 'none';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    }
+  } catch (e) {
+    status.textContent = t('settings.error');
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function toggleApiKeyVisibility() {
+  var input = document.getElementById('settings-llm-key');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+var settingsKeyCleared = false;
+
+function clearApiKey() {
+  settingsKeyCleared = true;
+  document.getElementById('settings-llm-key').value = '';
+  document.getElementById('settings-llm-key').placeholder = '(cleared)';
+  document.getElementById('settings-clear-key').style.display = 'none';
+}
+
+// Close settings on Escape key.
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('settings-overlay').style.display !== 'none') {
+    closeSettings();
+  }
+});
+
+// ===================================================================
 // Init
 // ===================================================================
 initTheme();
@@ -599,7 +787,7 @@ window.addEventListener('popstate', function() {
     switchView(hash.view, true);
     if (hash.tab) {
       // Restore sub-tab if present.
-      var tabBtn = document.querySelector('[data-cctab="' + hash.tab + '"],[data-cdxtab="' + hash.tab + '"],[data-octab="' + hash.tab + '"],[data-sesstab="' + hash.tab + '"]');
+      var tabBtn = document.querySelector('[data-cctab="' + hash.tab + '"],[data-cdxtab="' + hash.tab + '"],[data-octab="' + hash.tab + '"],[data-sesstab="' + hash.tab + '"],[data-prtab="' + hash.tab + '"]');
       if (tabBtn) tabBtn.click();
     }
     // Restore or close session detail overlay.

@@ -24,19 +24,6 @@ import (
 // Version is set at build time via -ldflags "-X main.Version=<tag>".
 var Version = "dev"
 
-func parseLogLevel(s string) slog.Level {
-	switch strings.ToLower(s) {
-	case "debug":
-		return slog.LevelDebug
-	case "warn":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
-	}
-}
-
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -44,8 +31,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Apply persisted settings (env vars take priority).
+	settings := config.LoadSettings(cfg.DataDir)
+	config.ApplySettings(cfg, settings)
+
+	var logLevel slog.LevelVar
+	switch strings.ToLower(cfg.LogLevel) {
+	case "debug":
+		logLevel.Set(slog.LevelDebug)
+	case "warn":
+		logLevel.Set(slog.LevelWarn)
+	case "error":
+		logLevel.Set(slog.LevelError)
+	default:
+		logLevel.Set(slog.LevelInfo)
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: parseLogLevel(cfg.LogLevel),
+		Level: &logLevel,
 	}))
 
 	// Step 1: ensure GreptimeDB binary is present.
@@ -164,7 +167,16 @@ func main() {
 	go tw.StartCodexScanner(codexCtx)
 
 	// Step 7: start HTTP server (dashboard + API proxy).
-	srv := handler.New(cfg.GreptimeDBHTTPPort, cfg.Port, webFileSystem(), logger, tw, bc)
+	llmCfg := handler.LLMConfig{
+		APIKey:   cfg.LLMAPIKey,
+		Provider: cfg.LLMProvider,
+		Model:    cfg.LLMModel,
+	}
+	srv := handler.New(cfg.GreptimeDBHTTPPort, cfg.Port, webFileSystem(), logger, tw, bc, llmCfg, handler.ServerConfig{
+		DataDir:     cfg.DataDir,
+		DataTTL:     cfg.DataTTL,
+		LogLevelVar: &logLevel,
+	})
 	httpSrv := &http.Server{
 		Addr:         cfg.Host + ":" + cfg.Port,
 		Handler:      srv.Router(),

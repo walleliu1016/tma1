@@ -26,10 +26,10 @@ Tagline: *"Your agent runs. TMA1 remembers."*
 | `server/internal/config/` | Env var config loading |
 | `server/internal/install/` | Download and verify GreptimeDB binary |
 | `server/internal/greptimedb/` | Start, stop, health-check GreptimeDB process + Flow init |
-| `server/internal/handler/` | HTTP handlers: /health, /status, /api/query, /api/hooks, /api/hooks/stream (SSE), /v1/otlp/*, dashboard UI |
+| `server/internal/handler/` | HTTP handlers: /health, /status, /api/query, /api/evaluate, /api/settings, /api/hooks, /api/hooks/stream (SSE), /v1/otlp/*, dashboard UI |
 | `server/internal/hooks/` | Hook script installer for Claude Code integration |
 | `server/internal/transcript/` | JSONL transcript watcher (Claude Code) + Codex session log parser |
-| `server/web/` | Embedded dashboard (HTML + JS + CSS via embed.FS), 5 views: Claude Code, Codex, OpenClaw, OTel GenAI, Sessions + Agent Canvas |
+| `server/web/` | Embedded dashboard (HTML + JS + CSS via embed.FS), 6 views: Claude Code, Codex, OpenClaw, OTel GenAI, Sessions, Prompts + Agent Canvas |
 | `site/` | Astro landing page → GitHub Pages → tma1.ai |
 | `.claude-plugin/` | Claude Code Marketplace registration |
 | `claude-plugin/` | Claude Code plugin: skills for setup + inline queries |
@@ -58,10 +58,14 @@ Browser dashboard (served by tma1-server)
     ├── Codex view: Overview, Tools, Cost, Anomalies, Sessions→ (from OTel logs with scope_name codex_*)
     ├── OpenClaw view: Overview, Traces, Cost, Search (from openclaw.* trace attrs)
     ├── OTel GenAI view: Overview, Traces, Cost, Security, Search (from gen_ai.* trace attrs)
-    └── Sessions view: Session list, full-screen detail overlay (two-column: Insights + Timeline), file heatmap, agent hierarchy, waterfall, canvas animation
-        ├── CC/Codex "Sessions→" is a link that jumps to Sessions view with agent_source filter
-        ├── Replay mode: replay past sessions as agent orchestration animation
-        └── Live mode: real-time SSE streaming of hook events → canvas visualization
+    ├── Sessions view: Session list, full-screen detail overlay (two-column: Insights + Timeline), file heatmap, agent hierarchy, waterfall, canvas animation
+    │   ├── CC/Codex "Sessions→" is a link that jumps to Sessions view with agent_source filter
+    │   ├── Replay mode: replay past sessions as agent orchestration animation
+    │   └── Live mode: real-time SSE streaming of hook events → canvas visualization
+    └── Prompts view: Prompt evaluation & improvement (heuristic scoring + optional LLM-as-judge)
+        ├── Overview: score distribution, trend, top suggestions, dimension breakdown
+        ├── Prompts: card-based list with per-prompt scoring, suggestions, optional LLM deep eval
+        └── Patterns: verb-based grouping (fix/add/implement/debug/...) with avg score/cost/turns
 ```
 
 OTel data goes through tma1-server's OTLP proxy (`/v1/otlp/*`), which forwards to GreptimeDB (port 14000) and auto-injects the `x-greptime-pipeline-name: greptime_trace_v1` header for trace requests. Agents should send OTLP to `http://localhost:14318/v1/otlp`.
@@ -199,6 +203,9 @@ make test            # Run tests with race detector
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
 | `TMA1_DATA_TTL` | `60d` | Default TTL for auto-created tables (2 months) |
+| `TMA1_LLM_API_KEY` | (empty) | API key for LLM provider (enables prompt deep evaluation) |
+| `TMA1_LLM_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
+| `TMA1_LLM_MODEL` | (auto) | Model override (default: `claude-sonnet-4-20250514` / `gpt-4o-mini`) |
 
 ## Key design decisions
 
@@ -232,6 +239,10 @@ On first start, tma1 writes a default GreptimeDB config to `~/.tma1/config/stand
 | Sessions view JS | `server/web/js/sessions.js` — orchestrator (KPI cards, session list, detail loading, search) |
 | Sessions sub-modules | `server/web/js/sessions-{stats,detail,insights,waterfall,timeline}.js` — stats computation, detail overlay, insight panels, waterfall chart, timeline rendering |
 | Agent Canvas animation | `server/web/js/agent-canvas.js` — canvas animation + tool fade-out + subagent lifecycle + compaction/permission events |
+| Prompts view JS | `server/web/js/prompts.js` — heuristic scoring engine, data loading, rendering, LLM eval integration |
+| LLM evaluation endpoint | `server/internal/handler/evaluate.go` — `/api/evaluate` (Anthropic/OpenAI proxy for prompt evaluation) |
+| Settings endpoint | `server/internal/handler/settings.go` — `GET/POST /api/settings` (read/write server config, hot-reload LLM) |
+| Settings persistence | `server/internal/config/settings.go` — Load/save `~/.tma1/settings.json`, env var override logic |
 | Codex view JS | `server/web/js/codex.js` |
 | OpenClaw view JS | `server/web/js/openclaw.js` |
 | Embedded FS declaration | `server/web/web.go` |

@@ -1,0 +1,184 @@
+package handler
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strings"
+
+	"github.com/tma1-ai/tma1/server/internal/config"
+)
+
+type settingsResponse struct {
+	LLMAPIKeySet  bool     `json:"llm_api_key_set"`
+	LLMAPIKeyHint string   `json:"llm_api_key_hint"`
+	LLMProvider   string   `json:"llm_provider"`
+	LLMModel      string   `json:"llm_model"`
+	LogLevel      string   `json:"log_level"`
+	DataTTL       string   `json:"data_ttl"`
+	EnvOverrides  []string `json:"env_overrides"`
+}
+
+type settingsRequest struct {
+	LLMAPIKey   string `json:"llm_api_key"`
+	LLMProvider string `json:"llm_provider"`
+	LLMModel    string `json:"llm_model"`
+	LogLevel    string `json:"log_level"`
+	DataTTL     string `json:"data_ttl"`
+}
+
+func redactKey(key string) string {
+	if key == "" {
+		return ""
+	}
+	if len(key) <= 8 {
+		return key[:1] + "***"
+	}
+	return key[:4] + "***" + key[len(key)-4:]
+}
+
+func (s *Server) handleGetSettings(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	llm := s.llmConfig
+	dataTTL := s.dataTTL
+	s.mu.RUnlock()
+
+	resp := settingsResponse{
+		LLMAPIKeySet:  llm.APIKey != "",
+		LLMAPIKeyHint: redactKey(llm.APIKey),
+		LLMProvider:   llm.Provider,
+		LLMModel:      llm.Model,
+		LogLevel:      s.logLevel(),
+		DataTTL:       dataTTL,
+		EnvOverrides:  config.EnvOverrides(),
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
+	var req settingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	// Validate provider.
+	if req.LLMProvider != "" && req.LLMProvider != "anthropic" && req.LLMProvider != "openai" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "provider must be 'anthropic' or 'openai'"})
+		return
+	}
+
+	// Validate log level.
+	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true, "": true}
+	if !validLevels[strings.ToLower(req.LogLevel)] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "log_level must be debug, info, warn, or error"})
+		return
+	}
+
+	// Read current file settings to preserve fields not sent.
+	current := config.LoadSettings(s.dataDir)
+
+	// Merge: only overwrite non-empty fields from request, unless explicitly clearing.
+	// For API key: empty string in request means "don't change"; to clear, send "__clear__".
+	settings := config.Settings{
+		LLMAPIKey:   current.LLMAPIKey,
+		LLMProvider: req.LLMProvider,
+		LLMModel:    req.LLMModel,
+		LogLevel:    req.LogLevel,
+		DataTTL:     req.DataTTL,
+	}
+	if req.LLMAPIKey == "__clear__" {
+		settings.LLMAPIKey = ""
+	} else if req.LLMAPIKey != "" {
+		settings.LLMAPIKey = req.LLMAPIKey
+	}
+
+	// Save to file.
+	if err := config.SaveSettings(s.dataDir, settings); err != nil {
+		s.logger.Error("failed to save settings", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save: " + err.Error()})
+		return
+	}
+
+	// Hot-reload LLM config (only if not locked by env var).
+	newLLM := s.getLLMConfig()
+	if !s.isEnvLocked("llm_api_key") {
+		newLLM.APIKey = settings.LLMAPIKey
+	}
+	if !s.isEnvLocked("llm_provider") && settings.LLMProvider != "" {
+		newLLM.Provider = settings.LLMProvider
+	}
+	if !s.isEnvLocked("llm_model") {
+		newLLM.Model = settings.LLMModel
+	}
+	s.setLLMConfig(newLLM)
+
+	// Hot-reload log level.
+	if !s.isEnvLocked("log_level") && settings.LogLevel != "" {
+		if s.logLevelVar != nil {
+			s.logLevelVar.Set(parseLogLevel(settings.LogLevel))
+		}
+	}
+
+	// Update stored data TTL (used for display, actual TTL applied on next startup).
+	if !s.isEnvLocked("data_ttl") && settings.DataTTL != "" {
+		s.mu.Lock()
+		s.dataTTL = settings.DataTTL
+		s.mu.Unlock()
+	}
+
+	s.logger.Info("settings saved", "llm_available", newLLM.Available(), "provider", newLLM.Provider)
+
+	// Return updated settings.
+	s.handleGetSettings(w, nil)
+}
+
+func (s *Server) isEnvLocked(key string) bool {
+	for _, k := range config.EnvOverrides() {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) getLLMConfig() LLMConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.llmConfig
+}
+
+func (s *Server) setLLMConfig(cfg LLMConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.llmConfig = cfg
+}
+
+func (s *Server) logLevel() string {
+	if s.logLevelVar == nil {
+		return "info"
+	}
+	switch s.logLevelVar.Level() {
+	case slog.LevelDebug:
+		return "debug"
+	case slog.LevelWarn:
+		return "warn"
+	case slog.LevelError:
+		return "error"
+	default:
+		return "info"
+	}
+}
+
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}

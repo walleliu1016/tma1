@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -27,10 +28,22 @@ type Server struct {
 	otlpClient        *http.Client
 	transcriptWatcher *transcript.Watcher
 	hookBroadcast     *HookBroadcaster
+	llmConfig         LLMConfig
+	mu                sync.RWMutex
+	dataDir           string
+	dataTTL           string
+	logLevelVar       *slog.LevelVar
+}
+
+// ServerConfig holds additional configuration for the Server.
+type ServerConfig struct {
+	DataDir     string
+	DataTTL     string
+	LogLevelVar *slog.LevelVar
 }
 
 // New creates a new Server.
-func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher, bc *HookBroadcaster) *Server {
+func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher, bc *HookBroadcaster, llm LLMConfig, sc ServerConfig) *Server {
 	if bc == nil {
 		bc = NewHookBroadcaster()
 	}
@@ -43,6 +56,10 @@ func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *s
 		otlpClient:        &http.Client{Timeout: 60 * time.Second},
 		transcriptWatcher: tw,
 		hookBroadcast:     bc,
+		llmConfig:         llm,
+		dataDir:           sc.DataDir,
+		dataTTL:           sc.DataTTL,
+		logLevelVar:       sc.LogLevelVar,
 	}
 }
 
@@ -66,6 +83,14 @@ func (s *Server) Router() http.Handler {
 	// Hook events from Claude Code / Codex.
 	r.Post("/api/hooks", s.handleHooks)
 	r.Get("/api/hooks/stream", s.handleHookStream)
+
+	// Prompt evaluation (LLM-as-judge).
+	r.HandleFunc("/api/evaluate", s.handleEvaluate)
+	r.Post("/api/evaluate/summary", s.handleEvaluateSummary)
+
+	// Settings (read/write server-side configuration).
+	r.Get("/api/settings", s.handleGetSettings)
+	r.Post("/api/settings", s.handleSaveSettings)
 
 	// OTLP proxy — agents send OTel data here; tma1-server injects
 	// the x-greptime-pipeline-name header for trace requests.
