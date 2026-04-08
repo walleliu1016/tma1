@@ -26,16 +26,7 @@
       </div>
     </div>
     <div class="header-right">
-      <div class="lang-switch">
-        <button data-lang="en" onclick="setLocale('en')">EN</button>
-        <button data-lang="zh" onclick="setLocale('zh')">中</button>
-        <button data-lang="es" onclick="setLocale('es')">ES</button>
-      </div>
-      <div class="theme-toggle">
-        <button data-theme="light" onclick="setTheme('light')" title="Light" data-i18n-title="ui.light">&#9788;</button>
-        <button data-theme="dark" onclick="setTheme('dark')" title="Dark" data-i18n-title="ui.dark">&#9790;</button>
-        <button data-theme="system" onclick="setTheme('system')" title="System" data-i18n-title="ui.system">&#9881;</button>
-      </div>
+      <button class="settings-gear" onclick="openSettings()" title="Settings" data-i18n-title="settings.title">&#9881;</button>
       <div class="view-tabs" id="view-tabs" style="display:none"></div>
       <select class="time-select" id="time-range" onchange="onTimeRangeChange()">
         <option value="15m" data-i18n="time.15m">Last 15m</option>
@@ -1189,6 +1180,92 @@
     </div>
   </div><!-- /view-sessions -->
 
+  <!-- ========================= PROMPTS VIEW ========================= -->
+  <div id="view-prompts" style="display:none">
+    <div class="cards">
+      <div class="card">
+        <div class="label" data-i18n="pr.card.prompts">Total Prompts</div>
+        <div class="value requests" id="pr-val-prompts">&mdash;</div>
+      </div>
+      <div class="card">
+        <div class="label" data-i18n="pr.card.avg_score">Avg Score</div>
+        <div class="value" id="pr-val-score">&mdash;</div>
+      </div>
+      <div class="card">
+        <div class="label" data-i18n="pr.card.avg_turns">Avg Turns / Session</div>
+        <div class="value tokens" id="pr-val-turns">&mdash;</div>
+      </div>
+      <div class="card">
+        <div class="label" data-i18n="pr.card.avg_cost">Avg Cost / Session</div>
+        <div class="value cost" id="pr-val-cost">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="pr-tabs">
+      <button class="tab active" data-prtab="pr-overview" data-i18n="tab.overview">Overview</button>
+      <button class="tab" data-prtab="pr-prompts" data-i18n="pr.tab.prompts">Prompts</button>
+      <button class="tab" data-prtab="pr-patterns" data-i18n="pr.tab.patterns">Patterns</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="tab-content active" id="tab-pr-overview">
+      <div class="trace-charts">
+        <div class="chart-container">
+          <h3 data-i18n="pr.score_distribution">Score Distribution</h3>
+          <div id="pr-chart-distribution"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+        </div>
+        <div class="chart-container">
+          <h3 data-i18n="pr.score_trend">Score Trend</h3>
+          <div id="pr-chart-trend"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <h3 data-i18n="pr.top_suggestions">Top Improvement Suggestions</h3>
+        <div id="pr-chart-suggestions"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      </div>
+      <div class="chart-container">
+        <h3 data-i18n="pr.dimension_breakdown">Dimension Breakdown</h3>
+        <div id="pr-chart-dimensions"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      </div>
+      <div class="chart-container" id="pr-ai-container" style="display:none">
+        <h3 style="display:flex;align-items:center;gap:10px">
+          <span data-i18n="pr.ai_insights">AI Insights</span>
+          <button class="pr-eval-btn" onclick="pr_loadAIInsights()" id="pr-ai-btn" data-i18n="pr.generate_insights">Generate</button>
+          <button class="pr-eval-btn" onclick="pr_toggleHistory()" id="pr-ai-history-btn" data-i18n="pr.ai_history">History</button>
+        </h3>
+        <div id="pr-ai-history-panel" style="display:none"></div>
+        <div id="pr-ai-insights">
+          <div class="chart-empty" data-i18n="pr.ai_click_to_generate">Click Generate to analyze a sample of your prompts with AI.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompts list -->
+    <div class="tab-content" id="tab-pr-prompts">
+      <div class="filters">
+        <select class="filter-select" onchange="pr_onSortChange(this.value)">
+          <option value="time" data-i18n="pr.sort.time">Sort: Time</option>
+          <option value="score" data-i18n="pr.sort.score">Sort: Score (worst first)</option>
+          <option value="cost" data-i18n="pr.sort.cost">Sort: Cost (highest first)</option>
+        </select>
+        <select class="filter-select" onchange="pr_onScoreFilterChange(this.value)">
+          <option value="all" data-i18n="pr.filter.all">Score: All</option>
+          <option value="poor" data-i18n="pr.filter.poor">Poor (0-39)</option>
+          <option value="fair" data-i18n="pr.filter.fair">Fair (40-69)</option>
+          <option value="good" data-i18n="pr.filter.good">Good (70-89)</option>
+          <option value="excellent" data-i18n="pr.filter.excellent">Excellent (90+)</option>
+        </select>
+      </div>
+      <div id="pr-prompt-list"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+      <div id="pr-pagination" style="text-align:center;padding:16px 0"></div>
+    </div>
+
+    <!-- Patterns -->
+    <div class="tab-content" id="tab-pr-patterns">
+      <div id="pr-pattern-content"><div class="chart-empty" data-i18n="empty.waiting">Waiting for data...</div></div>
+    </div>
+  </div><!-- /view-prompts -->
+
   <!-- Session Detail Overlay -->
   <div id="sess-detail-overlay" class="sess-overlay" style="display:none">
     <div id="sess-detail-content"></div>
@@ -1198,6 +1275,115 @@
   <div id="agent-canvas-overlay" class="ac-overlay" style="display:none">
     <canvas id="agent-canvas"></canvas>
     <div id="agent-canvas-controls" class="ac-controls"></div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-overlay" class="settings-overlay" style="display:none" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="font-size:16px;font-weight:600" data-i18n="settings.title">Settings</h2>
+        <button class="settings-close" onclick="closeSettings()">&times;</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title" data-i18n="settings.appearance">Appearance</div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.theme">Theme</div>
+          <div class="theme-toggle" id="settings-theme">
+            <button data-theme="light" onclick="setTheme('light')" data-i18n-title="ui.light">&#9788;</button>
+            <button data-theme="dark" onclick="setTheme('dark')" data-i18n-title="ui.dark">&#9790;</button>
+            <button data-theme="system" onclick="setTheme('system')" data-i18n-title="ui.system">&#8853;</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.language">Language</div>
+          <div class="lang-switch" id="settings-lang">
+            <button data-lang="en" onclick="setLocale('en')">EN</button>
+            <button data-lang="zh" onclick="setLocale('zh')">&#20013;</button>
+            <button data-lang="es" onclick="setLocale('es')">ES</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.time_range">Time Range</div>
+          <select class="settings-input" style="flex:0 0 auto;width:140px" id="settings-time-range" onchange="document.getElementById('time-range').value=this.value;onTimeRangeChange()">
+            <option value="15m" data-i18n="time.15m">Last 15m</option>
+            <option value="30m" data-i18n="time.30m">Last 30m</option>
+            <option value="1h" data-i18n="time.1h">Last 1h</option>
+            <option value="6h" data-i18n="time.6h">Last 6h</option>
+            <option value="24h" data-i18n="time.24h">Last 24h</option>
+            <option value="7d" data-i18n="time.7d">Last 7d</option>
+            <option value="30d" data-i18n="time.30d">Last 30d</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.auto_refresh">Auto-refresh</div>
+          <select class="settings-input" style="flex:0 0 auto;width:140px" id="settings-auto-refresh" onchange="document.getElementById('auto-refresh').value=this.value;onAutoRefreshChange()">
+            <option value="0" data-i18n="refresh.off">Off</option>
+            <option value="15" data-i18n="refresh.15s">&#x21bb; 15s</option>
+            <option value="30" data-i18n="refresh.30s">&#x21bb; 30s</option>
+            <option value="60" data-i18n="refresh.1m">&#x21bb; 1m</option>
+            <option value="300" data-i18n="refresh.5m">&#x21bb; 5m</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title" data-i18n="settings.llm">LLM Evaluation</div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.api_key">API Key</div>
+          <div style="flex:1;display:flex;gap:6px">
+            <input type="password" class="settings-input" id="settings-llm-key" placeholder="sk-..." autocomplete="off" />
+            <button class="settings-eye" onclick="toggleApiKeyVisibility()" title="Show/Hide">&#128065;</button>
+            <button class="settings-eye" onclick="clearApiKey()" id="settings-clear-key" style="display:none;font-size:12px" title="Clear">&times;</button>
+          </div>
+          <span class="settings-env-badge" id="settings-env-key" style="display:none" data-i18n="settings.env_locked">env</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.provider">Provider</div>
+          <select class="settings-input" style="flex:0 0 auto;width:160px" id="settings-llm-provider">
+            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI</option>
+          </select>
+          <span class="settings-env-badge" id="settings-env-provider" style="display:none" data-i18n="settings.env_locked">env</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.model">Model</div>
+          <input class="settings-input" id="settings-llm-model" placeholder="(auto)" />
+          <span class="settings-env-badge" id="settings-env-model" style="display:none" data-i18n="settings.env_locked">env</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title" data-i18n="settings.advanced">Advanced</div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.log_level">Log Level</div>
+          <select class="settings-input" style="flex:0 0 auto;width:140px" id="settings-log-level">
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warn">Warn</option>
+            <option value="error">Error</option>
+          </select>
+          <span class="settings-env-badge" id="settings-env-log" style="display:none" data-i18n="settings.env_locked">env</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.data_ttl">Data TTL</div>
+          <input class="settings-input" style="flex:0 0 auto;width:100px" id="settings-data-ttl" placeholder="60d" />
+          <span class="settings-env-badge" id="settings-env-ttl" style="display:none" data-i18n="settings.env_locked">env</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label" data-i18n="settings.greptimedb">GreptimeDB</div>
+          <div style="font-size:13px;display:flex;align-items:center;gap:6px">
+            <span class="status-dot" id="settings-gdb-dot"></span>
+            <span id="settings-gdb-status" style="color:var(--text-muted)">...</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px">
+        <span id="settings-status" class="settings-status"></span>
+        <button class="settings-save-btn" onclick="saveSettings()" id="settings-save-btn" data-i18n="settings.save">Save Settings</button>
+      </div>
+    </div>
   </div>
 
   <script src="/js/i18n.js"></script>
@@ -1215,6 +1401,7 @@
   <script src="/js/sessions-detail.js"></script>
   <script src="/js/sessions.js"></script>
   <script src="/js/agent-canvas.js"></script>
+  <script src="/js/prompts.js"></script>
   <script src="/js/views.js"></script>
 </body>
 </html>

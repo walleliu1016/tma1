@@ -13,7 +13,7 @@ the monolith buried on the moon, silently recording everything until you dig it 
 
 ## What's in it
 
-Five dashboard views, picked automatically from whatever data shows up:
+Six dashboard views, picked automatically from whatever data shows up:
 
 | View | Tabs | Data Source |
 |------|------|-------------|
@@ -22,6 +22,7 @@ Five dashboard views, picked automatically from whatever data shows up:
 | **OpenClaw** | Overview, Sessions, Traces, Cost, Security | OTel traces + metrics |
 | **OTel GenAI** | Overview, Traces, Cost, Security, Search | OTel traces (gen_ai semantic conventions) |
 | **Sessions** | Sessions, Search | Hooks + JSONL transcripts (Claude Code, Codex) |
+| **Prompts** | Overview, Prompts, Patterns | Heuristic scoring + optional LLM-as-judge |
 
 Sessions→ links in Claude Code and Codex views navigate to the unified Sessions view.
 
@@ -32,7 +33,9 @@ Each view gives you:
 - Anomalies tab that flags expensive requests, errors, and slow tools
 - Session replay with full conversation timeline
 - Search across all sessions by keyword
+- Prompt evaluation with heuristic scoring and optional LLM-as-judge
 - SQL access on port 14002, or the built-in query API
+- Settings panel to configure LLM API key and server options at runtime
 
 OpenClaw and OTel GenAI views also have a Security tab (shell commands, prompt injection, webhook errors).
 
@@ -124,7 +127,9 @@ tma1-server  (port 14318)
 Browser dashboard (embedded in the binary)
 ```
 
-One process, one binary. First start creates `~/.tma1/` and you're good to go. Nothing leaves your machine.
+One process, one binary. First start creates `~/.tma1/` and you're good to go. By default, nothing leaves your machine. If you enable optional LLM prompt evaluation (via Settings or `TMA1_LLM_API_KEY`), prompt content is sent to the configured provider (Anthropic/OpenAI) for scoring.
+
+Settings configured in the dashboard are saved to `~/.tma1/settings.json`. Environment variables always take priority over the settings file.
 
 ## OTLP Endpoints
 
@@ -147,6 +152,9 @@ Codex requires separate per-signal endpoints; other agents can use the single `/
 | `/status` | GET | Backend reachability |
 | `/api/query` | POST | SQL proxy (`{"sql": "SELECT ..."}`) |
 | `/api/prom/*` | GET/POST | Prometheus API proxy (PromQL) |
+| `/api/evaluate` | GET/POST | LLM prompt evaluation (availability check / single prompt) |
+| `/api/evaluate/summary` | POST | LLM batch summary (sampled prompts) |
+| `/api/settings` | GET/POST | Read/write server settings (LLM config, log level, TTL) |
 
 ## Configuration
 
@@ -161,6 +169,9 @@ Codex requires separate per-signal endpoints; other agents can use the single `/
 | `TMA1_GREPTIMEDB_MYSQL_PORT` | `14002` | GreptimeDB MySQL protocol port |
 | `TMA1_LOG_LEVEL` | `info` | Log level: debug/info/warn/error |
 | `TMA1_DATA_TTL` | `60d` | Default TTL for auto-created tables |
+| `TMA1_LLM_API_KEY` | (empty) | API key for LLM provider (enables prompt evaluation) |
+| `TMA1_LLM_PROVIDER` | `anthropic` | LLM provider: `anthropic` or `openai` |
+| `TMA1_LLM_MODEL` | (auto) | Model override for LLM evaluation |
 
 ## Development
 

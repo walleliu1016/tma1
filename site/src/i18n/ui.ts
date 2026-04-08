@@ -47,7 +47,7 @@ export const en: T = {
   ],
   features: {
     kicker: 'Features', title: 'Observability without the overhead',
-    desc: 'Five views for Claude Code, Codex, OpenClaw, OTel GenAI, and Sessions. The dashboard picks the right one from your data. No Grafana, no cloud, no YAML.',
+    desc: 'Six views for Claude Code, Codex, OpenClaw, OTel GenAI, Sessions, and Prompts. The dashboard picks the right one from your data. No Grafana, no cloud, no YAML.',
     cards: [
       { num: '01', title: 'Cost breakdown', desc: 'Which model costs the most? Which conversation burned through your budget? Token counts and estimated cost per model, plus burn-rate over time and cache hit ratios.' },
       { num: '02', title: 'Anomaly detection', desc: 'An agent stuck in a retry loop can burn hundreds of dollars. Each agent view has an Anomalies tab. Click any flagged request to jump straight into that session and see what went wrong.' },
@@ -114,7 +114,7 @@ export const zh: T = {
   ],
   features: {
     kicker: '\u529f\u80fd', title: '\u8f7b\u91cf\u53ef\u89c2\u6d4b',
-    desc: 'Claude Code\u3001Codex\u3001OpenClaw\u3001OTel GenAI\u3001Sessions \u4e94\u4e2a\u89c6\u56fe\uff0c\u6839\u636e\u6570\u636e\u81ea\u52a8\u5207\u6362\u3002\u4e0d\u7528\u88c5 Grafana\uff0c\u4e0d\u7528\u4e91\u670d\u52a1\uff0c\u4e0d\u7528\u5199 YAML\u3002',
+    desc: 'Claude Code、Codex、OpenClaw、OTel GenAI、Sessions、Prompts 六个视图，根据数据自动切换。不用装 Grafana，不用云服务，不用写 YAML。',
     cards: [
       { num: '01', title: '\u8d39\u7528\u660e\u7ec6', desc: '\u54ea\u4e2a\u6a21\u578b\u6700\u8d35\uff1f\u54ea\u4e2a\u5bf9\u8bdd\u628a\u9884\u7b97\u70e7\u5149\u4e86\uff1f\u6309\u6a21\u578b\u8ffd\u8e2a token \u548c\u8d39\u7528\uff0c\u80fd\u770b burn rate \u8d8b\u52bf\u548c\u7f13\u5b58\u547d\u4e2d\u7387\u3002' },
       { num: '02', title: '\u5f02\u5e38\u68c0\u6d4b', desc: 'Agent \u5361\u5728\u91cd\u8bd5\u5faa\u73af\u91cc\u53ef\u4ee5\u70e7\u6389\u51e0\u767e\u7f8e\u5143\u3002\u6bcf\u4e2a agent \u89c6\u56fe\u6709 Anomalies \u6807\u7b7e\u9875\uff0c\u70b9\u51fb\u4efb\u4f55\u4e00\u6761\u5f02\u5e38\u76f4\u63a5\u8df3\u5230\u90a3\u4e2a session\uff0c\u770b\u770b\u5230\u5e95\u54ea\u513f\u51fa\u4e86\u95ee\u9898\u3002' },
@@ -181,7 +181,7 @@ export const es: T = {
   ],
   features: {
     kicker: 'Funcionalidades', title: 'Observabilidad sin complicaciones',
-    desc: 'Cinco vistas para Claude Code, Codex, OpenClaw, OTel GenAI y Sessions. El dashboard elige la correcta seg\u00fan tus datos. Sin Grafana, sin nube, sin YAML.',
+    desc: 'Seis vistas para Claude Code, Codex, OpenClaw, OTel GenAI, Sessions y Prompts. El dashboard elige la correcta según tus datos. Sin Grafana, sin nube, sin YAML.',
     cards: [
       { num: '01', title: 'Desglose de costos', desc: '\u00bfQu\u00e9 modelo cuesta m\u00e1s? \u00bfQu\u00e9 conversaci\u00f3n quem\u00f3 tu presupuesto? Tokens y costo estimado por modelo, m\u00e1s burn rate y ratios de cache hit.' },
       { num: '02', title: 'Detecci\u00f3n de anomal\u00edas', desc: 'Un agente en un loop de reintentos puede quemar cientos de d\u00f3lares. Cada vista de agente tiene una pesta\u00f1a Anomalies. Hac\u00e9 clic en cualquiera para saltar a esa sesi\u00f3n y ver qu\u00e9 sali\u00f3 mal.' },

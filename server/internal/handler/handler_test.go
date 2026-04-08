@@ -16,7 +16,7 @@ import (
 
 func newTestServer() *Server {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	return New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	return New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 }
 
 func TestHealthEndpoint(t *testing.T) {
@@ -96,7 +96,7 @@ func TestQueryEndpointRequiresSQL(t *testing.T) {
 func TestQueryEndpointBadGateway(t *testing.T) {
 	// Use a port that's not listening to get a connection error.
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	r := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/api/query",
@@ -130,7 +130,7 @@ func TestPromProxyGETPassesQueryString(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/prom/label/__name__/values?match[]=up", nil)
@@ -171,7 +171,7 @@ func TestPromProxyPOSTPassesBody(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/api/prom/query_range",
@@ -198,7 +198,7 @@ func TestPromProxyPassesNon200Status(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/prom/query?query=invalid{", nil)
@@ -212,7 +212,7 @@ func TestPromProxyPassesNon200Status(t *testing.T) {
 
 func TestPromProxyBadGateway(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/prom/query", nil)
@@ -246,7 +246,7 @@ func TestOTLPProxyTraces(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/traces", strings.NewReader("trace-payload"))
@@ -278,7 +278,7 @@ func TestOTLPProxyMetrics(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/metrics", strings.NewReader("metrics-payload"))
@@ -309,7 +309,7 @@ func TestOTLPDirectProxyTraces(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/traces", strings.NewReader("trace-payload"))
@@ -340,7 +340,7 @@ func TestOTLPDirectProxyLogs(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/logs", strings.NewReader("log-payload"))
@@ -371,7 +371,7 @@ func TestOTLPDirectProxyMetrics(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/metrics", strings.NewReader("metrics-payload"))
@@ -405,7 +405,7 @@ func TestOTLPProxyPassthrough(t *testing.T) {
 	fmt.Sscanf(port, "%d", &portNum)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(portNum, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/logs", strings.NewReader("test-body"))
@@ -424,7 +424,7 @@ func TestOTLPProxyPassthrough(t *testing.T) {
 
 func TestOTLPProxyBadGateway(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	router := srv.Router()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/otlp/v1/traces", nil)
@@ -439,7 +439,7 @@ func TestOTLPProxyBadGateway(t *testing.T) {
 func TestStatusEndpointDegraded(t *testing.T) {
 	// Use a port that's not listening.
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster())
+	srv := New(19999, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(), LLMConfig{}, ServerConfig{})
 	r := srv.Router()
 
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
@@ -539,6 +539,282 @@ func TestHookStreamSSE(t *testing.T) {
 
 	if srv.hookBroadcast == nil {
 		t.Fatal("hookBroadcast is nil")
+	}
+}
+
+// --- Evaluate endpoint tests ---
+
+func TestEvaluateCheckNoAPIKey(t *testing.T) {
+	srv := newTestServer() // no LLM config
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/evaluate", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	var body map[string]any
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body["available"] != false {
+		t.Errorf("available = %v, want false", body["available"])
+	}
+}
+
+func TestEvaluateCheckWithAPIKey(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{APIKey: "sk-test", Provider: "anthropic"}, ServerConfig{})
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/evaluate", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	var body map[string]any
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body["available"] != true {
+		t.Errorf("available = %v, want true", body["available"])
+	}
+	if body["provider"] != "anthropic" {
+		t.Errorf("provider = %v, want anthropic", body["provider"])
+	}
+}
+
+func TestEvaluatePostNoAPIKey(t *testing.T) {
+	srv := newTestServer()
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/evaluate",
+		strings.NewReader(`{"prompt":"test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	var body map[string]string
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if !strings.Contains(body["error"], "not configured") {
+		t.Errorf("error = %q, want 'not configured' substring", body["error"])
+	}
+}
+
+func TestEvaluatePostEmptyPrompt(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{APIKey: "sk-test", Provider: "anthropic"}, ServerConfig{})
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/evaluate",
+		strings.NewReader(`{"prompt":""}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestEvaluateMethodNotAllowed(t *testing.T) {
+	srv := newTestServer()
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPut, "/api/evaluate", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestEvaluateSummaryNoAPIKey(t *testing.T) {
+	srv := newTestServer()
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/evaluate/summary",
+		strings.NewReader(`{"prompts":[{"content":"test","score":50}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+// --- Settings endpoint tests ---
+
+func TestSettingsGetDefault(t *testing.T) {
+	srv := newTestServer()
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	var body settingsResponse
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body.LLMAPIKeySet {
+		t.Error("llm_api_key_set should be false with no config")
+	}
+}
+
+func TestSettingsGetWithKey(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{APIKey: "sk-ant-api03-abcdef1234567890", Provider: "anthropic"}, ServerConfig{})
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	var body settingsResponse
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if !body.LLMAPIKeySet {
+		t.Error("llm_api_key_set should be true")
+	}
+	if strings.Contains(body.LLMAPIKeyHint, "abcdef1234567890") {
+		t.Error("hint should not contain full key")
+	}
+	if body.LLMAPIKeyHint == "" {
+		t.Error("hint should not be empty")
+	}
+}
+
+func TestSettingsSaveInvalidProvider(t *testing.T) {
+	tmpDir := t.TempDir()
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{}, ServerConfig{DataDir: tmpDir})
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/settings",
+		strings.NewReader(`{"llm_provider":"bad"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestSettingsSaveInvalidLogLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{}, ServerConfig{DataDir: tmpDir})
+	r := srv.Router()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/settings",
+		strings.NewReader(`{"log_level":"verbose"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestSettingsSaveInvalidTTL(t *testing.T) {
+	tmpDir := t.TempDir()
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{}, ServerConfig{DataDir: tmpDir})
+	r := srv.Router()
+
+	tests := []struct {
+		name string
+		ttl  string
+		want int
+	}{
+		{"invalid unit", `{"data_ttl":"2months"}`, http.StatusBadRequest},
+		{"no unit", `{"data_ttl":"60"}`, http.StatusBadRequest},
+		{"valid days", `{"data_ttl":"60d"}`, http.StatusOK},
+		{"valid weeks", `{"data_ttl":"1w"}`, http.StatusOK},
+		{"valid months", `{"data_ttl":"6M"}`, http.StatusOK},
+		{"valid years", `{"data_ttl":"1y"}`, http.StatusOK},
+		{"forever", `{"data_ttl":"forever"}`, http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/settings",
+				strings.NewReader(tt.ttl))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			if w.Code != tt.want {
+				body, _ := io.ReadAll(w.Body)
+				t.Fatalf("ttl %s: status = %d, want %d, body: %s", tt.ttl, w.Code, tt.want, body)
+			}
+		})
+	}
+}
+
+func TestSettingsOriginProtection(t *testing.T) {
+	tmpDir := t.TempDir()
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	srv := New(14000, "14318", http.Dir("."), logger, nil, NewHookBroadcaster(),
+		LLMConfig{}, ServerConfig{DataDir: tmpDir})
+	r := srv.Router()
+
+	tests := []struct {
+		name   string
+		origin string
+		want   int
+	}{
+		{"no origin", "", http.StatusOK},
+		{"localhost", "http://localhost:14318", http.StatusOK},
+		{"127.0.0.1", "http://127.0.0.1:14318", http.StatusOK},
+		{"evil site", "http://evil.com", http.StatusForbidden},
+		{"wrong port", "http://localhost:9999", http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/settings",
+				strings.NewReader(`{}`))
+			req.Header.Set("Content-Type", "application/json")
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			if w.Code != tt.want {
+				body, _ := io.ReadAll(w.Body)
+				t.Fatalf("origin %q: status = %d, want %d, body: %s", tt.origin, w.Code, tt.want, body)
+			}
+		})
+	}
+}
+
+func TestRedactKey(t *testing.T) {
+	tests := []struct {
+		key  string
+		want string
+	}{
+		{"", ""},
+		{"short", "s***"},
+		{"12345678", "1***"},
+		{"sk-ant-api03-abcdefghijklmnop", "sk-a***mnop"},
+	}
+	for _, tt := range tests {
+		got := redactKey(tt.key)
+		if got != tt.want {
+			t.Errorf("redactKey(%q) = %q, want %q", tt.key, got, tt.want)
+		}
 	}
 }
 
