@@ -18,6 +18,9 @@ type Config struct {
 	// DataDir is where GreptimeDB binary and data are stored (~/.tma1).
 	DataDir string
 
+	// GreptimeDBHost used to connect external greptimedb 
+	GreptimeDBHost string
+	
 	// GreptimeDB version to download ("latest" or "v0.x.y").
 	GreptimeDBVersion string
 
@@ -57,6 +60,7 @@ func Load() (*Config, error) {
 		Host:                env("TMA1_HOST", "127.0.0.1"),
 		Port:                env("TMA1_PORT", "14318"),
 		DataDir:             env("TMA1_DATA_DIR", filepath.Join(home, ".tma1")),
+		GreptimeDBHost:      env("TMA1_GREPTIMEDB_HOST", "localhost"),
 		GreptimeDBVersion:   env("TMA1_GREPTIMEDB_VERSION", "latest"),
 		GreptimeDBHTTPPort:  envInt("TMA1_GREPTIMEDB_HTTP_PORT", 14000),
 		GreptimeDBGRPCPort:  envInt("TMA1_GREPTIMEDB_GRPC_PORT", 14001),
