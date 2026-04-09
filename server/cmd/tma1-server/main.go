@@ -51,11 +51,13 @@ func main() {
 		Level: &logLevel,
 	}))
 
-	// Step 1: ensure GreptimeDB binary is present.
-	binPath, err := install.EnsureGreptimeDB(cfg.DataDir, cfg.GreptimeDBVersion, logger)
-	if err != nil {
-		logger.Error("failed to install greptimedb", "err", err)
-		os.Exit(1)
+	if (cfg.GreptimeDBHost == "") {
+		// Step 1: ensure GreptimeDB binary is present.
+		binPath, err := install.EnsureGreptimeDB(cfg.DataDir, cfg.GreptimeDBVersion, logger)
+		if err != nil {
+			logger.Error("failed to install greptimedb", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	// Step 2: start GreptimeDB child process.
