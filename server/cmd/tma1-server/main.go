@@ -51,7 +51,7 @@ func main() {
 		Level: &logLevel,
 	}))
 
-	if (cfg.GreptimeDBHost == "") {
+	if cfg.GreptimeDBHost == "" {
 		// Step 1: ensure GreptimeDB binary is present.
 		binPath, err := install.EnsureGreptimeDB(cfg.DataDir, cfg.GreptimeDBVersion, logger)
 		if err != nil {
