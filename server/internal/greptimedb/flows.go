@@ -25,11 +25,11 @@ var flowsSQL string
 // SetDatabaseTTL sets the default TTL on the public database so that
 // auto-created tables (OTel traces, logs, metrics) inherit it.
 // Idempotent — safe to call on every startup.
-func SetDatabaseTTL(httpPort int, ttl string, logger *slog.Logger) error {
+func SetDatabaseTTL(host string, httpPort int, ttl string, logger *slog.Logger) error {
 	if ttl != "forever" && !validTTL.MatchString(ttl) {
 		return fmt.Errorf("invalid TTL %q: must match <digits><unit> (e.g. 60d) or 'forever'", ttl)
 	}
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	stmt := fmt.Sprintf("ALTER DATABASE public SET 'ttl'='%s'", ttl)
 	if err := execSQL(sqlURL, stmt); err != nil {
 		return fmt.Errorf("set database TTL: %w", err)
@@ -114,8 +114,8 @@ func isIgnorableSchemaUpgradeError(err error) bool {
 
 // InitSessionTables creates the session tables.
 // Uses append-only mode with proper indexes for optimal performance.
-func InitSessionTables(httpPort int, logger *slog.Logger) error {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func InitSessionTables(host string, httpPort int, logger *slog.Logger) error {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	for _, ddl := range sessionTableDDLs {
 		if err := execSQL(sqlURL, ddl); err != nil {
 			return fmt.Errorf("init session tables: %w", err)
@@ -136,8 +136,8 @@ func InitSessionTables(httpPort int, logger *slog.Logger) error {
 // Flow creation (CREATE FLOW) failures are non-fatal — they are logged as warnings
 // and skipped, since the source table may have a different schema (e.g. openclaw.*
 // columns instead of gen_ai.*).
-func InitFlows(httpPort int, logger *slog.Logger) error {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func InitFlows(host string, httpPort int, logger *slog.Logger) error {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 
 	// Split on semicolons and execute each statement individually.
 	statements := splitSQL(flowsSQL)
@@ -167,8 +167,8 @@ var expectedFlows = map[string]struct{}{
 }
 
 // FlowsReady returns true if all expected flows already exist.
-func FlowsReady(httpPort int) bool {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func FlowsReady(host string, httpPort int) bool {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	form := url.Values{}
 	form.Set("sql", "SHOW FLOWS")
 
@@ -212,8 +212,8 @@ func FlowsReady(httpPort int) bool {
 // HasGenAITraces returns true if opentelemetry_traces contains at least one
 // GenAI span (gen_ai.system or gen_ai.provider.name is set).
 // Returns false if the table does not exist or has no GenAI data.
-func HasGenAITraces(httpPort int) bool {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func HasGenAITraces(host string, httpPort int) bool {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	// Try the current attribute first, then fall back to the deprecated one.
 	for _, col := range []string{"span_attributes.gen_ai.provider.name", "span_attributes.gen_ai.system"} {
 		n, err := queryScalarInt(sqlURL,
@@ -346,8 +346,8 @@ var defaultPricing = []modelPrice{
 }
 
 // SeedPricing inserts default model pricing if the table is empty.
-func SeedPricing(httpPort int, logger *slog.Logger) error {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func SeedPricing(host string, httpPort int, logger *slog.Logger) error {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	if err := execSQL(sqlURL, pricingTableDDL); err != nil {
 		return fmt.Errorf("ensure pricing table: %w", err)
 	}
@@ -382,8 +382,8 @@ func SeedPricing(httpPort int, logger *slog.Logger) error {
 
 // TruncatePricing removes all rows from the pricing table so that
 // SeedPricing can re-insert the latest defaults on upgrade.
-func TruncatePricing(httpPort int) error {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func TruncatePricing(host string, httpPort int) error {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 	return execSQL(sqlURL, "TRUNCATE TABLE tma1_model_pricing")
 }
 
@@ -394,8 +394,8 @@ func IsTableNotFound(err error) bool {
 
 // InitCostFlow reads pricing from tma1_model_pricing and creates/replaces
 // the cost flow with a dynamic CASE expression.
-func InitCostFlow(httpPort int, logger *slog.Logger) error {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", httpPort)
+func InitCostFlow(host string, httpPort int, logger *slog.Logger) error {
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", host, httpPort)
 
 	prices, err := queryPricing(sqlURL)
 	if err != nil {

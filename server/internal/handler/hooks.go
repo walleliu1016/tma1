@@ -249,7 +249,7 @@ func (s *Server) insertHookEvent(p hookPayload, agentSource, toolInput, toolResu
 		escapeSQLString(p.Metadata),
 	)
 
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", s.greptimeHTTPPort)
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", s.greptimeDBHost, s.greptimeHTTPPort)
 	form := url.Values{}
 	form.Set("sql", sql)
 

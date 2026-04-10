@@ -41,7 +41,7 @@ func (s *Server) handleSaveInsight(w http.ResponseWriter, r *http.Request) {
 	patternsJSON, _ := json.Marshal(req.Patterns)
 	sampleJSON, _ := json.Marshal(req.SamplePrompts)
 
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", s.greptimeHTTPPort)
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", s.greptimeDBHost, s.greptimeHTTPPort)
 	stmt := fmt.Sprintf(
 		"INSERT INTO tma1_prompt_insights "+
 			"(ts, insight_id, summary, patterns, top_tip, model, sample_size, total_prompts, avg_score, sample_prompts, time_range) "+
@@ -111,7 +111,7 @@ func (s *Server) handleGetInsight(w http.ResponseWriter, r *http.Request) {
 
 // proxySQL executes a SQL statement against GreptimeDB and pipes the response to w.
 func (s *Server) proxySQL(w http.ResponseWriter, stmt string) {
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", s.greptimeHTTPPort)
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", s.greptimeDBHost, s.greptimeHTTPPort)
 	form := url.Values{}
 	form.Set("sql", stmt)
 	resp, err := s.httpClient.Post(sqlURL, "application/x-www-form-urlencoded", strings.NewReader(form.Encode())) //nolint:gosec

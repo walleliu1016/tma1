@@ -20,7 +20,8 @@ import (
 
 // Server holds shared state for all HTTP handlers.
 type Server struct {
-	greptimeHTTPPort  int
+	greptimeDBHost   string
+	greptimeHTTPPort int
 	tma1Port          string
 	logger            *slog.Logger
 	webFS             http.FileSystem
@@ -44,11 +45,12 @@ type ServerConfig struct {
 }
 
 // New creates a new Server.
-func New(greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher, bc *HookBroadcaster, llm LLMConfig, sc ServerConfig) *Server {
+func New(greptimeDBHost string, greptimeHTTPPort int, tma1Port string, webFS http.FileSystem, logger *slog.Logger, tw *transcript.Watcher, bc *HookBroadcaster, llm LLMConfig, sc ServerConfig) *Server {
 	if bc == nil {
 		bc = NewHookBroadcaster()
 	}
 	return &Server{
+		greptimeDBHost:    greptimeDBHost,
 		greptimeHTTPPort:  greptimeHTTPPort,
 		tma1Port:          tma1Port,
 		logger:            logger,
@@ -120,7 +122,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // handleStatus checks whether GreptimeDB is reachable.
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	healthURL := fmt.Sprintf("http://localhost:%d/health", s.greptimeHTTPPort)
+	healthURL := fmt.Sprintf("http://%s:%d/health", s.greptimeDBHost, s.greptimeHTTPPort)
 	resp, err := s.httpClient.Get(healthURL) //nolint:gosec
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
@@ -163,7 +165,7 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sqlURL := fmt.Sprintf("http://localhost:%d/v1/sql", s.greptimeHTTPPort)
+	sqlURL := fmt.Sprintf("http://%s:%d/v1/sql", s.greptimeDBHost, s.greptimeHTTPPort)
 	form := url.Values{}
 	form.Set("sql", req.SQL)
 
@@ -183,7 +185,7 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 // /api/prom/query_range → http://localhost:{port}/v1/prometheus/api/v1/query_range
 func (s *Server) handlePromProxy(w http.ResponseWriter, r *http.Request) {
 	subPath := chi.URLParam(r, "*")
-	target := fmt.Sprintf("http://localhost:%d/v1/prometheus/api/v1/%s", s.greptimeHTTPPort, subPath)
+	target := fmt.Sprintf("http://%s:%d/v1/prometheus/api/v1/%s", s.greptimeDBHost, s.greptimeHTTPPort, subPath)
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}
@@ -224,7 +226,7 @@ func (s *Server) handleOTLPDirectProxy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) proxyOTLP(w http.ResponseWriter, r *http.Request, subPath string) {
-	target := fmt.Sprintf("http://localhost:%d/v1/otlp/%s", s.greptimeHTTPPort, subPath)
+	target := fmt.Sprintf("http://%s:%d/v1/otlp/%s", s.greptimeDBHost, s.greptimeHTTPPort, subPath)
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}

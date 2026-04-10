@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
@@ -25,7 +26,11 @@ import (
 var Version = "dev"
 
 func main() {
-	cfg, err := config.Load()
+	// Parse command-line flags
+	configPath := flag.String("config", "", "Path to TOML config file")
+	flag.Parse()
+
+	cfg, err := config.LoadWithFile(*configPath)
 	if err != nil {
 		slog.Error("failed to load config", "err", err)
 		os.Exit(1)
@@ -51,45 +56,60 @@ func main() {
 		Level: &logLevel,
 	}))
 
-	if cfg.GreptimeDBHost == "" {
-		// Step 1: ensure GreptimeDB binary is present.
-		binPath, err := install.EnsureGreptimeDB(cfg.DataDir, cfg.GreptimeDBVersion, logger)
+	// Determine GreptimeDB connection mode
+	isRemoteMode := strings.ToLower(cfg.GreptimeDBMode) == "remote"
+	var gdb *greptimedb.Process
+	var stopGDB func()
+	var binPath string
+
+	if isRemoteMode {
+		// Remote mode: connect to external GreptimeDB
+		logger.Info("using remote greptimedb", "host", cfg.GreptimeDBHost, "port", cfg.GreptimeDBHTTPPort)
+		if err := greptimedb.CheckConnectivity(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort); err != nil {
+			logger.Error("remote greptimedb unreachable", "err", err)
+			os.Exit(1)
+		}
+		stopGDB = func() {} // no-op for remote mode
+	} else {
+		// Local mode: ensure GreptimeDB binary is present and start process
+		var err error
+		binPath, err = install.EnsureGreptimeDB(cfg.DataDir, cfg.GreptimeDBVersion, logger)
 		if err != nil {
 			logger.Error("failed to install greptimedb", "err", err)
 			os.Exit(1)
 		}
-	}
 
-	// Step 2: start GreptimeDB child process.
-	gdb, err := greptimedb.Start(greptimedb.Config{
-		BinPath:   binPath,
-		DataDir:   cfg.DataDir,
-		HTTPPort:  cfg.GreptimeDBHTTPPort,
-		GRPCPort:  cfg.GreptimeDBGRPCPort,
-		MySQLPort: cfg.GreptimeDBMySQLPort,
-		Logger:    logger,
-	})
-	if err != nil {
-		logger.Error("failed to start greptimedb", "err", err)
-		os.Exit(1)
-	}
-	var stopOnce sync.Once
-	stopGDB := func() {
-		stopOnce.Do(func() {
-			stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_ = gdb.Stop(stopCtx)
+		// Start GreptimeDB child process.
+		gdb, err = greptimedb.Start(greptimedb.Config{
+			BinPath:   binPath,
+			DataDir:   cfg.DataDir,
+			HTTPPort:  cfg.GreptimeDBHTTPPort,
+			GRPCPort:  cfg.GreptimeDBGRPCPort,
+			MySQLPort: cfg.GreptimeDBMySQLPort,
+			Logger:    logger,
 		})
+		if err != nil {
+			logger.Error("failed to start greptimedb", "err", err)
+			os.Exit(1)
+		}
+		var stopOnce sync.Once
+		stopGDB = func() {
+			stopOnce.Do(func() {
+				stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				_ = gdb.Stop(stopCtx)
+			})
+		}
+		defer stopGDB()
 	}
-	defer stopGDB()
 
 	// Step 3: set database default TTL (before pricing/flows so new tables inherit it).
-	if err := greptimedb.SetDatabaseTTL(cfg.GreptimeDBHTTPPort, cfg.DataTTL, logger); err != nil {
+	if err := greptimedb.SetDatabaseTTL(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, cfg.DataTTL, logger); err != nil {
 		logger.Warn("set database TTL warning", "err", err)
 	}
 
 	// Step 3.1: create session tables (hooks + transcript — no dependency on trace data).
-	if err := greptimedb.InitSessionTables(cfg.GreptimeDBHTTPPort, logger); err != nil {
+	if err := greptimedb.InitSessionTables(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger); err != nil {
 		logger.Warn("session table creation failed", "err", err)
 	}
 
@@ -108,7 +128,7 @@ func main() {
 			if old != "" {
 				logger.Info("tma1 upgrade detected", "from", old, "to", Version)
 			}
-			if err := onUpgrade(cfg.GreptimeDBHTTPPort, logger); err != nil {
+			if err := onUpgrade(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger); err != nil {
 				if greptimedb.IsTableNotFound(err) {
 					logger.Info("pricing table does not exist yet (fresh install), skipping truncate")
 				} else {
@@ -120,7 +140,7 @@ func main() {
 	}
 
 	// Step 4: ensure pricing table exists and seed model pricing.
-	seedErr := greptimedb.SeedPricing(cfg.GreptimeDBHTTPPort, logger)
+	seedErr := greptimedb.SeedPricing(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger)
 	if seedErr != nil {
 		logger.Warn("seed pricing warning", "err", seedErr)
 	}
@@ -130,7 +150,7 @@ func main() {
 	// because it requires opentelemetry_traces which may not exist yet.
 	// initFlowsWithRetry (Step 5) handles deferred cost flow creation.
 	if upgraded && upgradeErr == nil && seedErr == nil {
-		if err := greptimedb.InitCostFlow(cfg.GreptimeDBHTTPPort, logger); err != nil {
+		if err := greptimedb.InitCostFlow(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger); err != nil {
 			logger.Warn("cost flow creation deferred to background retry", "err", err)
 		}
 		if err := os.WriteFile(versionFile, []byte(Version), 0o644); err != nil {
@@ -145,7 +165,7 @@ func main() {
 	// periodically so flows are created once trace data arrives.
 	flowCtx, flowCancel := context.WithCancel(context.Background())
 	defer flowCancel()
-	go initFlowsWithRetry(flowCtx, cfg.GreptimeDBHTTPPort, logger)
+	go initFlowsWithRetry(flowCtx, cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger)
 
 	// Step 6: install hook script + create transcript watcher.
 	portNum := 14318
@@ -160,7 +180,7 @@ func main() {
 	}
 
 	bc := handler.NewHookBroadcaster()
-	tw := transcript.NewWatcher(cfg.GreptimeDBHTTPPort, logger, bc.Broadcast)
+	tw := transcript.NewWatcher(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, logger, bc.Broadcast)
 	defer tw.StopAll()
 
 	// Start Codex session scanner (discovers ~/.codex/sessions/ JSONL files).
@@ -174,7 +194,7 @@ func main() {
 		Provider: cfg.LLMProvider,
 		Model:    cfg.LLMModel,
 	}
-	srv := handler.New(cfg.GreptimeDBHTTPPort, cfg.Port, webFileSystem(), logger, tw, bc, llmCfg, handler.ServerConfig{
+	srv := handler.New(cfg.GreptimeDBHost, cfg.GreptimeDBHTTPPort, cfg.Port, webFileSystem(), logger, tw, bc, llmCfg, handler.ServerConfig{
 		DataDir:     cfg.DataDir,
 		DataTTL:     cfg.DataTTL,
 		LogLevelVar: &logLevel,
@@ -206,6 +226,7 @@ func main() {
 	}()
 
 	logger.Info("tma1 dashboard ready",
+		"mode", cfg.GreptimeDBMode,
 		"url", "http://localhost:"+cfg.Port,
 		"otlp_endpoint", "http://localhost:"+cfg.Port+"/v1/otlp",
 	)
@@ -229,30 +250,30 @@ func parsePort(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-func onUpgrade(httpPort int, logger *slog.Logger) error {
+func onUpgrade(host string, httpPort int, logger *slog.Logger) error {
 	// Clear stale pricing so SeedPricing re-inserts with latest data.
-	return greptimedb.TruncatePricing(httpPort)
+	return greptimedb.TruncatePricing(host, httpPort)
 }
 
 // initFlowsWithRetry attempts to create flow aggregations up to 10 times
 // (~5 minutes). Skips if all flows already exist. Only attempts creation
 // when GenAI trace data is present (flows depend on gen_ai.* columns).
-func initFlowsWithRetry(ctx context.Context, httpPort int, logger *slog.Logger) {
+func initFlowsWithRetry(ctx context.Context, host string, httpPort int, logger *slog.Logger) {
 	for i := 0; i < 10; i++ {
 		// Re-attempt pricing seed in case it failed at startup.
-		if err := greptimedb.SeedPricing(httpPort, logger); err != nil {
+		if err := greptimedb.SeedPricing(host, httpPort, logger); err != nil {
 			logger.Warn("seed pricing retry warning", "err", err)
 		}
-		if greptimedb.FlowsReady(httpPort) {
+		if greptimedb.FlowsReady(host, httpPort) {
 			logger.Info("all flows already exist, skipping init")
 			return
 		}
-		if greptimedb.HasGenAITraces(httpPort) {
+		if greptimedb.HasGenAITraces(host, httpPort) {
 			logger.Info("GenAI trace data detected, creating flows")
-			if err := greptimedb.InitFlows(httpPort, logger); err != nil {
+			if err := greptimedb.InitFlows(host, httpPort, logger); err != nil {
 				logger.Warn("flow creation failed, will retry", "err", err)
 			}
-			if err := greptimedb.InitCostFlow(httpPort, logger); err != nil {
+			if err := greptimedb.InitCostFlow(host, httpPort, logger); err != nil {
 				logger.Warn("cost flow creation failed, will retry", "err", err)
 			}
 		}

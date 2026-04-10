@@ -55,10 +55,10 @@ type sessionWatch struct {
 
 // NewWatcher creates a transcript watcher that writes to the given GreptimeDB instance.
 // The optional broadcast callback fans out hook events to SSE subscribers.
-func NewWatcher(greptimeHTTPPort int, logger *slog.Logger, broadcast BroadcastFunc) *Watcher {
+func NewWatcher(greptimeDBHost string, greptimeHTTPPort int, logger *slog.Logger, broadcast BroadcastFunc) *Watcher {
 	return &Watcher{
 		sessions:  make(map[string]*sessionWatch),
-		sqlURL:    fmt.Sprintf("http://localhost:%d/v1/sql", greptimeHTTPPort),
+		sqlURL:    fmt.Sprintf("http://%s:%d/v1/sql", greptimeDBHost, greptimeHTTPPort),
 		logger:    logger,
 		broadcast: broadcast,
 	}

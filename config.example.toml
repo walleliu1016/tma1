@@ -1,0 +1,50 @@
+# TMA1 Configuration Example
+# Copy this file to config.toml and modify as needed.
+# Usage: tma1-server --config /path/to/config.toml
+#
+# Priority: Environment variables > TOML file > Defaults
+
+[server]
+# Address tma1-server binds to
+host = "127.0.0.1"
+
+# HTTP port for dashboard and API
+port = "14318"
+
+# Log level: debug, info, warn, error
+log_level = "info"
+
+# Default TTL for auto-created tables
+data_ttl = "60d"
+
+# Directory for GreptimeDB data and binaries (default: ~/.tma1)
+# data_dir = "/custom/path/.tma1"
+
+[greptimedb]
+# Mode: "local" or "remote"
+# - local: tma1-server manages GreptimeDB process (default)
+# - remote: connect to external GreptimeDB instance
+mode = "local"
+
+# Hostname/IP of GreptimeDB
+# - In local mode: typically "localhost"
+# - In remote mode: the remote server address (e.g., "192.168.1.100" or "db.example.com")
+host = "localhost"
+
+# Ports
+http_port = 14000   # HTTP API + OTLP ingestion
+grpc_port = 14001   # gRPC protocol
+mysql_port = 14002  # MySQL protocol
+
+# GreptimeDB version to download (only used in local mode)
+version = "latest"
+
+[llm]
+# API key for LLM provider (enables prompt evaluation feature)
+# api_key = "sk-xxx"
+
+# Provider: "anthropic" or "openai"
+provider = "anthropic"
+
+# Model override (optional, defaults to claude-sonnet-4 / gpt-4o-mini)
+# model = "claude-sonnet-4-20250514"

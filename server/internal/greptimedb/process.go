@@ -119,3 +119,25 @@ func (p *Process) waitHealthy(url string, timeout time.Duration) error {
 	}
 	return fmt.Errorf("timeout after %s", timeout)
 }
+
+// CheckConnectivity verifies that a remote GreptimeDB instance is reachable.
+// It retries up to 3 times with 5-second timeout per attempt.
+func CheckConnectivity(host string, httpPort int) error {
+	healthURL := fmt.Sprintf("http://%s:%d/health", host, httpPort)
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for i := 0; i < 3; i++ {
+		resp, err := client.Get(healthURL) //nolint:gosec
+		if err == nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return nil
+			}
+		}
+		if i < 2 {
+			time.Sleep(1 * time.Second)
+		}
+	}
+	return fmt.Errorf("greptimedb at %s:%d is unreachable after 3 attempts", host, httpPort)
+}
