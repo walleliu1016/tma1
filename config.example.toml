@@ -1,50 +1,121 @@
-# TMA1 Configuration Example
-# Copy this file to config.toml and modify as needed.
+# =============================================================================
+# TMA1 Configuration File
+# =============================================================================
 # Usage: tma1-server --config /path/to/config.toml
 #
 # Priority: Environment variables > TOML file > Defaults
+#
+# All settings can be overridden by environment variables:
+#   TMA1_HOST, TMA1_PORT, TMA1_DATA_DIR
+#   TMA1_GREPTIMEDB_MODE, TMA1_GREPTIMEDB_HOST, TMA1_GREPTIMEDB_VERSION
+#   TMA1_GREPTIMEDB_HTTP_PORT, TMA1_GREPTIMEDB_GRPC_PORT, TMA1_GREPTIMEDB_MYSQL_PORT
+#   TMA1_LOG_LEVEL, TMA1_DATA_TTL
+#   TMA1_LLM_API_KEY, TMA1_LLM_PROVIDER, TMA1_LLM_MODEL
+# =============================================================================
 
+# -----------------------------------------------------------------------------
+# Server Configuration
+# -----------------------------------------------------------------------------
 [server]
 # Address tma1-server binds to
+# Default: "127.0.0.1" (localhost only, safe for local development)
+# Use "0.0.0.0" to accept connections from all interfaces (use with caution)
 host = "127.0.0.1"
 
 # HTTP port for dashboard and API
+# Default: 14318
+# Dashboard URL: http://localhost:14318
+# OTLP endpoint: http://localhost:14318/v1/otlp
 port = "14318"
 
 # Log level: debug, info, warn, error
+# Default: "info"
 log_level = "info"
 
-# Default TTL for auto-created tables
+# Default TTL (Time-To-Live) for auto-created tables
+# Examples: "30d", "60d", "90d", "7d"
+# Default: "60d"
 data_ttl = "60d"
 
-# Directory for GreptimeDB data and binaries (default: ~/.tma1)
-# data_dir = "/custom/path/.tma1"
+# Directory for GreptimeDB data and binaries
+# Default: ~/.tma1 (e.g., /home/user/.tma1 or C:\Users\user\.tma1)
+# Uncomment to use a custom location:
+# data_dir = "/var/lib/tma1"
 
+# -----------------------------------------------------------------------------
+# GreptimeDB Configuration
+# -----------------------------------------------------------------------------
 [greptimedb]
 # Mode: "local" or "remote"
-# - local: tma1-server manages GreptimeDB process (default)
-# - remote: connect to external GreptimeDB instance
+# - local:  tma1-server downloads, starts, and manages GreptimeDB process
+# - remote: connect to an external GreptimeDB instance (self-hosted or cloud)
+# Default: "local"
 mode = "local"
 
 # Hostname/IP of GreptimeDB
 # - In local mode: typically "localhost"
-# - In remote mode: the remote server address (e.g., "192.168.1.100" or "db.example.com")
+# - In remote mode: the remote server address
+#   Examples: "192.168.1.100", "db.example.com", "greptimedb.cloud.myorg.com"
+# Default: "localhost"
 host = "localhost"
 
-# Ports
-http_port = 14000   # HTTP API + OTLP ingestion
-grpc_port = 14001   # gRPC protocol
-mysql_port = 14002  # MySQL protocol
+# HTTP API port (used for SQL queries, health checks, and OTLP ingestion)
+# Default: 14000
+http_port = 14000
+
+# gRPC protocol port
+# Default: 14001
+grpc_port = 14001
+
+# MySQL protocol port (for direct SQL connections via MySQL client)
+# Default: 14002
+mysql_port = 14002
 
 # GreptimeDB version to download (only used in local mode)
+# Use "latest" for the most recent stable version
+# Or specify a version: "v0.9.5", "v0.10.0", etc.
+# Default: "latest"
 version = "latest"
 
+# -----------------------------------------------------------------------------
+# LLM Configuration (for Prompt Evaluation Feature)
+# -----------------------------------------------------------------------------
 [llm]
-# API key for LLM provider (enables prompt evaluation feature)
-# api_key = "sk-xxx"
+# API key for LLM provider
+# When set, enables the prompt evaluation feature (LLM-as-judge)
+# Default: "" (disabled)
+# Example: "sk-ant-xxx" for Anthropic, "sk-xxx" for OpenAI
+# api_key = "sk-ant-xxx"
 
-# Provider: "anthropic" or "openai"
+# LLM provider: "anthropic" or "openai"
+# Default: "anthropic"
 provider = "anthropic"
 
-# Model override (optional, defaults to claude-sonnet-4 / gpt-4o-mini)
+# Model override (optional)
+# If not specified, defaults to:
+#   - Anthropic: "claude-sonnet-4-20250514"
+#   - OpenAI: "gpt-4o-mini"
 # model = "claude-sonnet-4-20250514"
+
+# =============================================================================
+# Example: Remote GreptimeDB Configuration
+# =============================================================================
+# Uncomment and modify the following section to connect to a remote GreptimeDB:
+#
+# [server]
+# host = "0.0.0.0"
+# port = "14318"
+# log_level = "info"
+# data_ttl = "30d"
+#
+# [greptimedb]
+# mode = "remote"
+# host = "greptimedb.example.com"
+# http_port = 4000
+# grpc_port = 4001
+# mysql_port = 4002
+# # version is ignored in remote mode
+#
+# [llm]
+# provider = "anthropic"
+# api_key = "sk-ant-xxx"
