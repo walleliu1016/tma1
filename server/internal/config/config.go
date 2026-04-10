@@ -1,11 +1,12 @@
 package config
 
 import (
-	"encoding/toml"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/BurntSushi/toml"
 )
 
 // Config holds all runtime configuration for tma1-server.
@@ -136,16 +137,10 @@ type llmConfig struct {
 
 // parseTOMLFile reads and parses a TOML configuration file.
 func parseTOMLFile(path string) (*tomlConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
 	var cfg tomlConfig
-	if err := toml.Unmarshal(data, &cfg); err != nil {
+	if _, err := toml.DecodeFile(path, &cfg); err != nil {
 		return nil, err
 	}
-
 	return &cfg, nil
 }
 
