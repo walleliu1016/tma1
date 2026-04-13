@@ -329,10 +329,14 @@ func (w *Watcher) processOpenClawLine(sessionID, line string, seen map[string]st
 	}
 
 	// Dedup by entry ID (OpenClaw v3 entries all have unique 8-char hex IDs).
-	// Falls back to type+timestamp for v1 format (no id field).
+	// Falls back to type+timestamp+content-prefix hash for v1 format (no id field).
 	dedupKey := entry.ID
 	if dedupKey == "" {
-		dedupKey = entry.Type + ":" + entry.Timestamp
+		prefix := line
+		if len(prefix) > 200 {
+			prefix = prefix[:200]
+		}
+		dedupKey = entry.Type + ":" + entry.Timestamp + ":" + prefix
 	}
 	if _, ok := seen[dedupKey]; ok {
 		return
@@ -555,6 +559,18 @@ func (w *Watcher) insertOpenClawMessage(sessionID string, ts time.Time, msgType,
 			usage.OutputTokens,
 			usage.CacheReadTokens,
 			usage.CacheCreationTokens,
+			durationMs,
+		)
+	} else if durationMs > 0 {
+		sql = fmt.Sprintf(
+			"INSERT INTO tma1_messages (ts, session_id, message_type, \"role\", content, model, tool_name, tool_use_id, duration_ms) "+
+				"VALUES (%d, '%s', '%s', '%s', '%s', '%s', '', '', %d)",
+			msTs,
+			escapeSQLString(sessionID),
+			escapeSQLString(msgType),
+			escapeSQLString(role),
+			escapeSQLString(truncate(content, maxContentLen)),
+			escapeSQLString(model),
 			durationMs,
 		)
 	} else {
