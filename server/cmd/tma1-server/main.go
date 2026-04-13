@@ -199,6 +199,7 @@ func main() {
 
 		flowCancel()
 		codexCancel()
+		openclawCancel()
 		tw.StopAll()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

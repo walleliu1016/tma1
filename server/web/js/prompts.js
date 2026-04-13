@@ -20,7 +20,8 @@ var prExpandedIdx = -1;
 function pr_sourceSQL() {
   var el = document.getElementById('pr-source-filter');
   if (!el || !el.value) return '';
-  return " AND session_id IN (SELECT DISTINCT session_id FROM tma1_hook_events WHERE agent_source = '" + escapeSQLString(el.value) + "')";
+  var iv = intervalSQL();
+  return " AND session_id IN (SELECT DISTINCT session_id FROM tma1_hook_events WHERE agent_source = '" + escapeSQLString(el.value) + "' AND ts > NOW() - INTERVAL '" + iv + "')";
 }
 
 function pr_reload() {
