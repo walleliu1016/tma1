@@ -110,13 +110,15 @@ MIN_GREPTIMEDB_VERSION="1.0.0"
 # version_lt returns 0 (true) if $1 < $2.
 # Compares major.minor.patch numerically; when equal, a pre-release
 # version (e.g. 1.0.0-rc.2) is considered less than the release (1.0.0).
-# POSIX-compatible — works on macOS and Linux without sort -V.
+# Accepts an optional leading 'v' prefix (e.g. v1.0.0).
+# Bash-compatible — works on macOS and Linux without requiring sort -V.
 version_lt() {
-  local a_pre="${1#*-}" b_pre="${2#*-}"
+  local ver_a="${1#v}" ver_b="${2#v}"  # strip optional v prefix
+  local a_pre="${ver_a#*-}" b_pre="${ver_b#*-}"
   # If no hyphen, *-pattern matches the whole string — clear it.
-  [ "$a_pre" = "$1" ] && a_pre=""
-  [ "$b_pre" = "$2" ] && b_pre=""
-  local a="${1%%-*}" b="${2%%-*}"  # numeric part only
+  [ "$a_pre" = "$ver_a" ] && a_pre=""
+  [ "$b_pre" = "$ver_b" ] && b_pre=""
+  local a="${ver_a%%-*}" b="${ver_b%%-*}"  # numeric part only
   local a1 a2 a3 b1 b2 b3
   IFS=. read -r a1 a2 a3 <<EOF
 $a
@@ -142,7 +144,7 @@ download_greptimedb() {
   if [ -f "$greptime_bin" ] && [ "$TMA1_FORCE" != "1" ]; then
     # Check if the installed version meets the minimum requirement.
     local installed_ver
-    installed_ver=$("$greptime_bin" --version 2>/dev/null | grep '^version:' | awk '{print $2}' || true)
+    installed_ver=$("$greptime_bin" --version 2>/dev/null | grep '^[[:space:]]*version:' | awk '{print $2}' || true)
     if [ -n "$installed_ver" ] && ! version_lt "$installed_ver" "$MIN_GREPTIMEDB_VERSION"; then
       info "GreptimeDB ${installed_ver} already installed (>= ${MIN_GREPTIMEDB_VERSION}), skipping download."
       return
