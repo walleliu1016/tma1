@@ -146,7 +146,9 @@ func isOpenClawPrimaryTranscript(name string) bool {
 // openclawSessionIDFromFilename extracts the session UUID from the transcript filename.
 // OpenClaw gateway format: "<sessionId>.jsonl" (primary).
 // Pi CLI fallback: "<timestamp>_<sessionId>.jsonl" (splits on first underscore).
-// Topic sessions: "<sessionId>-topic-<threadId>.jsonl".
+// Topic sessions may appear with or without a timestamp prefix:
+//   - "<sessionId>-topic-<threadId>.jsonl"
+//   - "<timestamp>_<sessionId>-topic-<threadId>.jsonl"
 func openclawSessionIDFromFilename(name string) string {
 	base := strings.TrimSuffix(name, ".jsonl")
 	// Split on first underscore: timestamp part is before, sessionId part is after.
@@ -326,8 +328,8 @@ type ocContentBlock struct {
 }
 
 // isToolCallBlock returns true for tool call content blocks.
-// Pi runtime uses "toolCall"; OpenClaw's extractToolCallNames also accepts
-// "tool_use", "tool_call", "toolcall" for read-time compatibility.
+// Pi runtime uses "toolCall"; this helper also accepts "tool_use",
+// "tool_call", "toolcall" for read-time compatibility.
 func isToolCallBlock(t string) bool {
 	switch strings.ToLower(t) {
 	case "toolcall", "tool_call", "tool_use":
