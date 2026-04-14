@@ -43,6 +43,8 @@ function pr_reload() {
       });
       var pg = document.getElementById('pr-pagination');
       if (pg) pg.innerHTML = '';
+      var ai = document.getElementById('pr-ai-container');
+      if (ai) ai.style.display = 'none';
       return;
     }
     pr_loadData().then(function() {
