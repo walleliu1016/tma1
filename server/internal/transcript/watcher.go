@@ -244,8 +244,8 @@ func (w *Watcher) processLine(sessionID, line string, seen map[string]struct{}) 
 		return
 	}
 
-	// Emit SessionStart on first valid entry (aligns CC watcher with Codex/OpenClaw parsers).
-	// Skipped when hookTriggered was true (marker pre-set in Watch).
+	// Emit SessionStart on the first valid entry processed for this session
+	// unless it has already been recorded in seen.
 	if _, ok := seen[sessionStartKey]; !ok {
 		if err := w.insertCCSessionStart(sessionID, entry.CWD); err != nil {
 			w.logger.Warn("failed to insert SessionStart, will retry on next line",
@@ -496,7 +496,11 @@ func (w *Watcher) broadcastHookEvent(sessionID, eventType, toolName, toolInput, 
 // This aligns the CC watcher with Codex/OpenClaw parsers, ensuring the source filter works
 // even if CC HTTP hooks are not configured.
 // Runs synchronously so the caller can retry on failure.
+// Acquires insertSem to respect the concurrency limit shared with other inserts.
 func (w *Watcher) insertCCSessionStart(sessionID, cwd string) error {
+	insertSem <- struct{}{}
+	defer func() { <-insertSem }()
+
 	msTs := time.Now().UnixMilli()
 	for {
 		prev := lastInsertTS.Load()

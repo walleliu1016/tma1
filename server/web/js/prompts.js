@@ -38,6 +38,7 @@ function pr_reload() {
       });
       var empty = '<div class="chart-empty">' + t('empty.no_data') + '</div>';
       ['pr-chart-distribution', 'pr-chart-trend', 'pr-chart-suggestions', 'pr-chart-dimensions', 'pr-prompt-list', 'pr-pattern-content'].forEach(function(id) {
+        if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
         var el = document.getElementById(id);
         if (el) el.innerHTML = empty;
       });
