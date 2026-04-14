@@ -15,13 +15,41 @@ var prAllScores = [];    // all composite scores for distribution
 var prLLMAvailable = null; // null = unchecked, true/false
 var prExpandedIdx = -1;
 
-// pr_sourceSQL returns a WHERE clause fragment for agent_source filtering.
-// Uses session_id IN (SELECT ...) to filter tma1_messages by agent_source from tma1_hook_events.
-function pr_sourceSQL() {
+// pr_sourceSessionIDs fetches session IDs matching the selected agent_source filter.
+// Returns null when "All" is selected (no filter needed), or a SQL IN-list string.
+// Uses a two-step approach instead of a subquery to avoid GreptimeDB memory issues.
+var prSourceCache = { range: null, source: null, ids: null };
+
+async function pr_sourceSessionIDs() {
   var el = document.getElementById('pr-source-filter');
-  if (!el || !el.value) return '';
+  if (!el || !el.value) return null; // "All" — no filter
+
+  var src = el.value;
   var iv = intervalSQL();
-  return " AND session_id IN (SELECT DISTINCT session_id FROM tma1_hook_events WHERE agent_source = '" + escapeSQLString(el.value) + "' AND ts > NOW() - INTERVAL '" + iv + "')";
+  var cacheKey = iv + ':' + src;
+  if (prSourceCache.range === cacheKey) return prSourceCache.ids;
+
+  var res = await query(
+    "SELECT DISTINCT session_id FROM tma1_hook_events WHERE agent_source = '" +
+    escapeSQLString(src) + "' AND ts > NOW() - INTERVAL '" + iv + "' LIMIT 500"
+  );
+  var r = rowsToObjects(res);
+  if (!r || r.length === 0) {
+    prSourceCache = { range: cacheKey, source: src, ids: '' };
+    return '';
+  }
+  var ids = r.map(function(row) { return "'" + escapeSQLString(row.session_id) + "'"; }).join(',');
+  prSourceCache = { range: cacheKey, source: src, ids: ids };
+  return ids;
+}
+
+// prCachedSourceIDs is set by pr_reload() before any queries run.
+var prCachedSourceIDs = null; // null = "All", '' = no match, 'id,...' = filter list
+
+function pr_sourceSQL() {
+  if (prCachedSourceIDs === null) return ''; // "All"
+  if (prCachedSourceIDs === '') return ' AND 1=0'; // no matching sessions
+  return ' AND session_id IN (' + prCachedSourceIDs + ')';
 }
 
 function pr_reload() {
@@ -29,6 +57,7 @@ function pr_reload() {
   prPromptData = [];
   prPage = 0;
   prExpandedIdx = -1;
+  prSourceCache = { range: null, source: null, ids: null }; // invalidate source cache on reload
   pr_loadCards().then(function(ok) {
     if (!ok) {
       // Clear KPI cards and content areas when no data matches the filter.
@@ -350,6 +379,7 @@ var prDataGeneration = 0; // incremented on each pr_loadData(), used as AI insig
 async function pr_loadCards() {
   prDataCache = null; // invalidate on every cards reload (refresh / time range change)
   prPromptData = [];  // force pr_loadData() re-fetch (don't let AI Insights use stale data)
+  prCachedSourceIDs = await pr_sourceSessionIDs();
   var iv = intervalSQL();
   try {
     var res = await query(
