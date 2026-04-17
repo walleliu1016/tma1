@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,30 @@ const (
 	copilotCLIAgentSource    = "copilot_cli"
 	copilotCLISessionPfx     = "cp:"
 )
+
+// copilotCLIIngestedDirs is the set of on-disk session directory names whose
+// events have already been ingested into GreptimeDB. Used to skip re-backfill
+// on server restart, since the hook/message tables are append_mode=true and
+// have no unique constraint. Populated once at scanner startup.
+var (
+	copilotCLIIngestedDirs   = make(map[string]struct{})
+	copilotCLIIngestedDirsMu sync.RWMutex
+)
+
+// markCopilotCLIDirIngested records that a directory has been (or is being)
+// ingested, so subsequent scan cycles won't re-process it.
+func markCopilotCLIDirIngested(dirName string) {
+	copilotCLIIngestedDirsMu.Lock()
+	copilotCLIIngestedDirs[dirName] = struct{}{}
+	copilotCLIIngestedDirsMu.Unlock()
+}
+
+func copilotCLIDirIngested(dirName string) bool {
+	copilotCLIIngestedDirsMu.RLock()
+	_, ok := copilotCLIIngestedDirs[dirName]
+	copilotCLIIngestedDirsMu.RUnlock()
+	return ok
+}
 
 // escapeSQLStringFull escapes single quotes for SQL string literals.
 // GreptimeDB's /v1/sql API does NOT interpret backslash escapes,
@@ -38,6 +63,11 @@ func (w *Watcher) StartCopilotCLIScanner(ctx context.Context) {
 	}
 	baseDir := filepath.Join(homeDir, ".copilot", "session-state")
 	w.logger.Info("copilot-cli session scanner started", "path", baseDir)
+
+	// Load the set of already-ingested session directories so we don't re-backfill
+	// them on restart. The tables are append-only with no unique constraints, so
+	// duplicate ingestion would compound metrics on every server restart.
+	w.loadCopilotCLIIngestedDirs()
 
 	// First scan has no age limit to pick up ALL historical sessions.
 	firstScan := true
@@ -139,14 +169,86 @@ func (w *Watcher) scanCopilotCLISessionsWithAge(baseDir string, activeAge time.D
 		if alreadyWatching {
 			continue
 		}
+		// Skip sessions already fully ingested into the DB from a previous run.
+		// Trade-off: if Copilot CLI continued writing to this file while the server
+		// was down, those tail events will be missed. Acceptable for now — the
+		// alternative is persisting per-file offsets.
+		if copilotCLIDirIngested(c.id) {
+			continue
+		}
 		if activeCount+newWatchers >= maxConcurrentWatchers {
 			break // defer remaining to next scan cycle
 		}
 		// Old completed sessions stop immediately after backfill (no idle wait).
 		isActive := now.Sub(c.mod) < copilotCLIActiveAge
+		markCopilotCLIDirIngested(c.id)
 		w.watchCopilotCLIWithActive(watcherKey, c.id, c.path, isActive)
 		newWatchers++
 	}
+}
+
+// loadCopilotCLIIngestedDirs queries GreptimeDB for all session_ids already
+// ingested from Copilot CLI and populates copilotCLIIngestedDirs. Session IDs
+// in the DB are namespaced as "cp:<sessionId>" (with optional "#N" suffix for
+// split multi-session files); the directory name is just "<sessionId>" before
+// the first split, so we strip both the prefix and any split suffix.
+func (w *Watcher) loadCopilotCLIIngestedDirs() {
+	form := url.Values{}
+	form.Set("sql", "SELECT DISTINCT session_id FROM tma1_hook_events WHERE agent_source = 'copilot_cli'")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := newPostRequest(ctx, w.sqlURL, form)
+	if err != nil {
+		w.logger.Warn("copilot-cli: failed to build ingested-sessions query", "error", err)
+		return
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		w.logger.Warn("copilot-cli: failed to query ingested sessions", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != 200 {
+		w.logger.Warn("copilot-cli: non-200 querying ingested sessions", "status", resp.StatusCode)
+		return
+	}
+	var output struct {
+		Output []struct {
+			Records struct {
+				Rows [][]json.RawMessage `json:"rows"`
+			} `json:"records"`
+		} `json:"output"`
+	}
+	if err := json.Unmarshal(body, &output); err != nil {
+		w.logger.Warn("copilot-cli: failed to parse ingested-sessions response", "error", err)
+		return
+	}
+	if len(output.Output) == 0 {
+		return
+	}
+	copilotCLIIngestedDirsMu.Lock()
+	defer copilotCLIIngestedDirsMu.Unlock()
+	for _, row := range output.Output[0].Records.Rows {
+		if len(row) == 0 {
+			continue
+		}
+		var sid string
+		if err := json.Unmarshal(row[0], &sid); err != nil {
+			continue
+		}
+		sid = strings.TrimPrefix(sid, copilotCLISessionPfx)
+		// Strip "#N" split suffix to recover the on-disk directory name.
+		if idx := strings.Index(sid, "#"); idx > 0 {
+			sid = sid[:idx]
+		}
+		if sid != "" {
+			copilotCLIIngestedDirs[sid] = struct{}{}
+		}
+	}
+	w.logger.Info("copilot-cli: loaded previously-ingested sessions", "count", len(copilotCLIIngestedDirs))
 }
 
 func (w *Watcher) watchCopilotCLI(watcherKey, sessionID, filePath string) {
@@ -558,32 +660,6 @@ func (w *Watcher) handleCopilotCLISkillInvoked(ts time.Time, ev copilotCLIEvent,
 	}
 	metadata := map[string]string{"skill": data.Skill}
 	w.insertCopilotCLIHookEvent(ts, fctx, "SkillInvoked", "", "", "", "", metadata)
-}
-
-// copilotCLISessionExists checks if data for this session already exists in GreptimeDB.
-// Used to skip backfill on restart and prevent duplicate ingestion.
-func (w *Watcher) copilotCLISessionExists(dbSessionID string) bool {
-	form := url.Values{}
-	form.Set("sql", fmt.Sprintf(
-		"SELECT 1 FROM tma1_hook_events WHERE session_id = '%s' AND agent_source = 'copilot_cli' LIMIT 1",
-		escapeSQLString(dbSessionID),
-	))
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	req, err := newPostRequest(ctx, w.sqlURL, form)
-	if err != nil {
-		return false
-	}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	// If the response contains any row data, the session exists.
-	return resp.StatusCode == 200 && strings.Contains(string(body), "\"rows\":[")
 }
 
 // execSQLDebug wraps execSQL with additional logging for debugging insert failures.

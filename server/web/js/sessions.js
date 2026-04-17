@@ -218,12 +218,12 @@ async function sess_loadDetail(sessionId, agentSource) {
     query(
       "SELECT ts, session_id, event_type, agent_source, tool_name, tool_input, tool_result, " +
       "tool_use_id, agent_id, agent_type, notification_type, \"message\", cwd, permission_mode, metadata, conversation_id " +
-      "FROM tma1_hook_events WHERE session_id = '" + sid + "' ORDER BY ts ASC LIMIT 5000"
+      "FROM tma1_hook_events WHERE session_id = '" + sid + "' ORDER BY ts ASC LIMIT 50000"
     ).catch(function() { return null; }),
     query(
       "SELECT ts, session_id, message_type, tool_name, tool_use_id, content, model, " +
       "input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, duration_ms " +
-      "FROM tma1_messages WHERE session_id = '" + sid + "' ORDER BY ts ASC LIMIT 5000"
+      "FROM tma1_messages WHERE session_id = '" + sid + "' ORDER BY ts ASC LIMIT 50000"
     ).catch(function() { return null; }),
   ]);
   if (sessDetailVersion !== myVersion) return;

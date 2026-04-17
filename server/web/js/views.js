@@ -124,6 +124,10 @@ function updateHash() {
     var tab3 = document.querySelector('#oc-tabs .tab.active');
     var tabName3 = tab3 ? tab3.dataset.octab : null;
     if (tabName3 && tabName3 !== 'oc-overview') hash += '/' + tabName3;
+  } else if (currentView === 'copilot-cli') {
+    var gcpTab = document.querySelector('#gcp-tabs .tab.active');
+    var gcpTabName = gcpTab ? gcpTab.dataset.gcptab : null;
+    if (gcpTabName && gcpTabName !== 'gcp-overview') hash += '/' + gcpTabName;
   } else if (currentView === 'sessions') {
     var sessTab = document.querySelector('#sess-tabs .tab.active');
     var sessTabName = sessTab ? sessTab.dataset.sesstab : null;
@@ -225,7 +229,7 @@ async function initViews() {
   if (hasCCView) views.push({ id: 'claude-code', label: t('view.claude_code') });
   if (dataSources.hasCodex) views.push({ id: 'codex', label: t('view.codex') });
   if (dataSources.hasOpenClaw) views.push({ id: 'openclaw', label: t('view.openclaw') });
-  if (dataSources.hasCopilotCLI) views.push({ id: 'copilot-cli', label: 'Copilot CLI' });
+  if (dataSources.hasCopilotCLI) views.push({ id: 'copilot-cli', label: t('view.copilot_cli') });
   if (dataSources.hasGenAITraces) views.push({ id: 'traces', label: t('view.otel_genai') });
   if (dataSources.hasHookEvents) views.push({ id: 'sessions', label: t('view.sessions') });
   if (dataSources.hasMessages) views.push({ id: 'prompts', label: t('view.prompts') });
@@ -268,6 +272,9 @@ async function initViews() {
     } else if (targetView === 'openclaw') {
       var tabBtn3 = document.querySelector('#oc-tabs .tab[data-octab="' + hash.tab + '"]');
       if (tabBtn3) tabBtn3.click();
+    } else if (targetView === 'copilot-cli') {
+      var tabBtnGcp = document.querySelector('#gcp-tabs .tab[data-gcptab="' + hash.tab + '"]');
+      if (tabBtnGcp) tabBtnGcp.click();
     } else if (targetView === 'sessions') {
       var tabBtnSess = document.querySelector('#sess-tabs .tab[data-sesstab="' + hash.tab + '"]');
       if (tabBtnSess) tabBtnSess.click();

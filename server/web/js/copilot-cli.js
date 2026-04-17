@@ -31,18 +31,32 @@ async function gcp_loadCards() {
         "SUM(CASE WHEN message_type IN ('user','tool_result','tool_use') THEN LENGTH(COALESCE(content,''))/4 ELSE 0 END) AS est_in_tok " +
         gcp_msgWhere() + " AND model != '' GROUP BY model"
       ),
-      // Avg duration (cast to epoch ms to avoid Duration arithmetic)
+      // Per-session timestamp bounds (duration computed in JS via tsToMs).
       query(
-        "SELECT AVG(dur_sec) AS v FROM (" +
-        "SELECT (MAX(CAST(ts AS BIGINT)) - MIN(CAST(ts AS BIGINT))) / 1000 AS dur_sec " +
-        gcp_hookWhere() + " GROUP BY session_id HAVING COUNT(*) > 1) sub"
+        "SELECT MIN(ts) AS min_ts, MAX(ts) AS max_ts " +
+        gcp_hookWhere() + " GROUP BY session_id HAVING COUNT(*) > 1"
       ),
     ]);
 
     var outTok = Number(rows(results[0])?.[0]?.[0]) || 0;
     var toolCalls = Number(rows(results[1])?.[0]?.[0]) || 0;
     var sessions = Number(rows(results[2])?.[0]?.[0]) || 0;
-    var avgDur = Number(rows(results[4])?.[0]?.[0]) || 0;
+    var avgDur = 0;
+    var durRows = rowsToObjects(results[4]);
+    if (durRows.length > 0) {
+      var totalDurSec = 0;
+      var durCount = 0;
+      for (var dj = 0; dj < durRows.length; dj++) {
+        var dr = durRows[dj];
+        var minMs = tsToMs(dr.min_ts);
+        var maxMs = tsToMs(dr.max_ts);
+        if (isFinite(minMs) && isFinite(maxMs) && maxMs >= minMs) {
+          totalDurSec += (maxMs - minMs) / 1000;
+          durCount++;
+        }
+      }
+      avgDur = durCount > 0 ? totalDurSec / durCount : 0;
+    }
 
     // Calculate cost from model pricing
     var totalCost = 0;
