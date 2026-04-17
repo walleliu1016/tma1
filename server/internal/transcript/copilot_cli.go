@@ -91,10 +91,6 @@ func (w *Watcher) StartCopilotCLIScanner(ctx context.Context) {
 	}
 }
 
-func (w *Watcher) scanCopilotCLISessions(baseDir string) {
-	w.scanCopilotCLISessionsWithAge(baseDir, copilotCLIActiveAge)
-}
-
 func (w *Watcher) scanCopilotCLISessionsWithAge(baseDir string, activeAge time.Duration) {
 	now := time.Now()
 
@@ -249,10 +245,6 @@ func (w *Watcher) loadCopilotCLIIngestedDirs() {
 		}
 	}
 	w.logger.Info("copilot-cli: loaded previously-ingested sessions", "count", len(copilotCLIIngestedDirs))
-}
-
-func (w *Watcher) watchCopilotCLI(watcherKey, sessionID, filePath string) {
-	w.watchCopilotCLIWithActive(watcherKey, sessionID, filePath, true)
 }
 
 func (w *Watcher) watchCopilotCLIWithActive(watcherKey, sessionID, filePath string, isActive bool) {
