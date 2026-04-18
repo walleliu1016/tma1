@@ -306,6 +306,7 @@ tr.active-trace td { background: var(--bg-hover); }
   border-radius: 3px; min-width: 3px;
   display: flex; align-items: center; padding-left: 6px;
   font-size: 10px; color: #fff; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
 }
 .waterfall-bar.ok { background: var(--green-bar); }
 .waterfall-bar.error { background: var(--red-bar); }
@@ -666,6 +667,12 @@ tr.active-trace td { background: var(--bg-hover); }
 .tl-tool-card { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 2px 0; background: var(--card-bg); }
 .tl-tool-card-header { display: flex; align-items: center; gap: 8px; }
 .tl-tool-dur { color: var(--text-dim); font-size: 11px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.tl-tool-dur-info { position: relative; margin-left: 3px; color: var(--text-dim); opacity: 0.6; cursor: pointer; font-size: 11px; user-select: none; transition: opacity 0.15s, color 0.15s; }
+.tl-tool-dur-info:hover, .tl-tool-dur-info.active { opacity: 1; color: var(--blue); }
+.tl-tool-dur-popover { display: none; position: absolute; right: 0; top: calc(100% + 6px); width: 260px; padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35); color: var(--text); font-size: 11px; line-height: 1.5; font-weight: normal; text-align: left; white-space: normal; z-index: 50; cursor: default; }
+.tl-tool-dur-info:hover .tl-tool-dur-popover,
+.tl-tool-dur-info:focus-visible .tl-tool-dur-popover,
+.tl-tool-dur-info.active .tl-tool-dur-popover { display: block; }
 .tl-tool-status { font-size: 14px; }
 .tl-tool-card-ok { border-left: 3px solid var(--green); }
 .tl-tool-card-ok .tl-tool-status { color: var(--green); }
@@ -740,15 +747,20 @@ tr.active-trace td { background: var(--bg-hover); }
 .sess-timeline-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 16px; position: relative; }
 .sess-timeline-panel .sess-detail-toolbar { padding-top: 0; }
 .sess-timeline-panel .sess-timeline-scroll { flex: 1; max-height: none; }
-.sess-panel-toggle { position: absolute; top: 4px; right: 4px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 13px; line-height: 22px; text-align: center; z-index: 1; transition: color 0.15s; }
-.sess-panel-toggle:hover { color: var(--text); border-color: var(--text-dim); }
+.sess-panel-toggle { position: absolute; top: 4px; right: 4px; background: var(--bg-card); border: 1px solid var(--border-strong); color: var(--text); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 26px; text-align: center; z-index: 5; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s; }
+.sess-panel-toggle:hover { background: var(--bg-hover); border-color: var(--blue); color: var(--blue); transform: scale(1.08); }
+/* Offsets cancel .sess-insights-panel's 16px padding so the sticky button aligns
+   with the opposite panel's absolute-positioned button (top:4px, left:4px). */
+.sess-insights-panel > .sess-panel-toggle { position: sticky; top: -12px; float: right; margin: -12px -12px 0 0; }
 .sess-timeline-panel .sess-panel-toggle { right: auto; left: 4px; }
 .sess-overlay-body.expand-left .sess-insights-panel { flex: 1; width: auto; }
 .sess-overlay-body.expand-left .sess-timeline-panel { display: none; }
-.sess-overlay-body.expand-left .sess-insights-panel .sess-panel-toggle { transform: scaleX(-1); }
+.sess-overlay-body.expand-left .sess-insights-panel > .sess-panel-toggle { transform: scaleX(-1); }
+.sess-overlay-body.expand-left .sess-insights-panel > .sess-panel-toggle:hover { transform: scaleX(-1) scale(1.08); }
 .sess-overlay-body.expand-right .sess-insights-panel { display: none; }
 .sess-overlay-body.expand-right .sess-timeline-panel { flex: 1; }
-.sess-overlay-body.expand-right .sess-timeline-panel .sess-panel-toggle { transform: scaleX(-1); }
+.sess-overlay-body.expand-right .sess-timeline-panel > .sess-panel-toggle { transform: scaleX(-1); }
+.sess-overlay-body.expand-right .sess-timeline-panel > .sess-panel-toggle:hover { transform: scaleX(-1) scale(1.08); }
 .sess-close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1; }
 .sess-close-btn:hover { color: var(--text); }
 @media (max-width: 768px) {
