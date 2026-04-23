@@ -188,6 +188,16 @@ func main() {
 	defer codexCancel()
 	go tw.StartCodexScanner(codexCtx)
 
+	// Start OpenClaw session scanner (discovers ~/.openclaw/agents/*/sessions/ JSONL files).
+	openclawCtx, openclawCancel := context.WithCancel(context.Background())
+	defer openclawCancel()
+	go tw.StartOpenClawScanner(openclawCtx)
+
+	// Start Copilot CLI session scanner (discovers ~/.copilot/session-state/*/events.jsonl).
+	copilotCLICtx, copilotCLICancel := context.WithCancel(context.Background())
+	defer copilotCLICancel()
+	go tw.StartCopilotCLIScanner(copilotCLICtx)
+
 	// Step 7: start HTTP server (dashboard + API proxy).
 	llmCfg := handler.LLMConfig{
 		APIKey:   cfg.LLMAPIKey,
@@ -216,6 +226,8 @@ func main() {
 
 		flowCancel()
 		codexCancel()
+		openclawCancel()
+		copilotCLICancel()
 		tw.StopAll()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

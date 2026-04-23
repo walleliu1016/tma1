@@ -103,11 +103,57 @@ download() {
 }
 
 # --- Download GreptimeDB binary via official install script ---
+# Minimum GreptimeDB version required by TMA1. Keep in sync with
+# minRequiredVersion in server/internal/install/install.go.
+MIN_GREPTIMEDB_VERSION="1.0.0"
+
+# version_lt returns 0 (true) if $1 < $2.
+# Compares major.minor.patch numerically; when equal, a pre-release
+# version (e.g. 1.0.0-rc.2) is considered less than the release (1.0.0).
+# Accepts an optional leading 'v' prefix (e.g. v1.0.0).
+# Bash-compatible — works on macOS and Linux without requiring sort -V.
+version_lt() {
+  local ver_a="${1#v}" ver_b="${2#v}"  # strip optional v prefix
+  local a_pre="${ver_a#*-}" b_pre="${ver_b#*-}"
+  # If no hyphen, *-pattern matches the whole string — clear it.
+  [ "$a_pre" = "$ver_a" ] && a_pre=""
+  [ "$b_pre" = "$ver_b" ] && b_pre=""
+  local a="${ver_a%%-*}" b="${ver_b%%-*}"  # numeric part only
+  local a1 a2 a3 b1 b2 b3
+  IFS=. read -r a1 a2 a3 <<EOF
+$a
+EOF
+  IFS=. read -r b1 b2 b3 <<EOF
+$b
+EOF
+  a1="${a1:-0}" a2="${a2:-0}" a3="${a3:-0}"
+  b1="${b1:-0}" b2="${b2:-0}" b3="${b3:-0}"
+  [ "$a1" -lt "$b1" ] 2>/dev/null && return 0
+  [ "$a1" -gt "$b1" ] 2>/dev/null && return 1
+  [ "$a2" -lt "$b2" ] 2>/dev/null && return 0
+  [ "$a2" -gt "$b2" ] 2>/dev/null && return 1
+  [ "$a3" -lt "$b3" ] 2>/dev/null && return 0
+  [ "$a3" -gt "$b3" ] 2>/dev/null && return 1
+  # Same numeric version: pre-release < release.
+  [ -n "$a_pre" ] && [ -z "$b_pre" ] && return 0
+  return 1
+}
+
 download_greptimedb() {
   local greptime_bin="${INSTALL_DIR}/greptime"
   if [ -f "$greptime_bin" ] && [ "$TMA1_FORCE" != "1" ]; then
-    info "GreptimeDB binary already present, skipping download."
-    return
+    # Check if the installed version meets the minimum requirement.
+    local installed_ver
+    installed_ver=$("$greptime_bin" --version 2>/dev/null | grep '^[[:space:]]*version:' | awk '{print $2}' || true)
+    if [ -n "$installed_ver" ] && ! version_lt "$installed_ver" "$MIN_GREPTIMEDB_VERSION"; then
+      info "GreptimeDB ${installed_ver} already installed (>= ${MIN_GREPTIMEDB_VERSION}), skipping download."
+      return
+    fi
+    if [ -n "$installed_ver" ]; then
+      info "GreptimeDB ${installed_ver} is below minimum ${MIN_GREPTIMEDB_VERSION}, upgrading..."
+    else
+      info "Cannot determine GreptimeDB version, upgrading..."
+    fi
   fi
 
   mkdir -p "$INSTALL_DIR"
@@ -211,6 +257,17 @@ setup_launchd() {
 
   <key>ProcessType</key>
   <string>Background</string>
+
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>1048576</integer>
+  </dict>
+  <key>HardResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>1048576</integer>
+  </dict>
 </dict>
 </plist>
 PLIST
@@ -246,6 +303,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=${INSTALL_DIR}/tma1-server
+LimitNOFILE=infinity
 Restart=on-failure
 RestartSec=3
 Environment=TMA1_DATA_DIR=${data_dir}

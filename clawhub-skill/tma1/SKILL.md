@@ -54,7 +54,7 @@ metadata:
 TMA1 gives you local-first observability for your AI agent.
 Token usage, cost, latency — stored locally, queryable with plain SQL.
 No cloud account. No Docker. No Grafana setup.
-Works with Claude Code, Codex, OpenClaw, or any OTel-enabled agent.
+Works with Claude Code, Codex, GitHub Copilot CLI, OpenClaw, or any OTel-enabled agent.
 
 The name comes from TMA-1 (Tycho Magnetic Anomaly-1) in *2001: A Space Odyssey*:
 the monolith buried on the moon, silently recording everything until you dig it out.
@@ -82,7 +82,8 @@ TMA1 captures different data depending on the agent:
 | --- | --- | --- |
 | **Claude Code** | OTel metrics + logs + traces + hooks | Token usage, cost, active time, tool decisions, API requests, TTFT, tool timing, permission waits, user prompts, session conversations |
 | **Codex** | OTel logs + metrics + session JSONL | User prompts, LLM calls, tool executions, token usage, session conversations |
-| **OpenClaw** | OTel traces + metrics | LLM calls (model, tokens, cache), messages, webhooks, sessions, queue depth |
+| **GitHub Copilot CLI** | Session JSONL (auto-discovered, zero config) | Session lifecycle, user/assistant messages, tool calls + failures, subagent lifecycle, skill invocations, output tokens per response |
+| **OpenClaw** | OTel traces + metrics + session JSONL | LLM calls (model, tokens, cache), messages, webhooks, sessions, queue depth, session conversations |
 | **Other (GenAI SDK)** | OTel traces + logs | Token usage, cost, latency, conversation replay, prompt injection detection (GenAI semantic conventions) |
 
 The dashboard auto-detects the data source and shows the right view.
@@ -190,9 +191,26 @@ openclaw config set diagnostics.otel.logs true
 openclaw gateway restart
 ```
 
+Session transcripts at `~/.openclaw/agents/*/sessions/*.jsonl` are auto-discovered — no extra configuration needed for Sessions and Prompts views.
+
 #### Claude Code
 
-Add to `~/.claude/settings.json` (Windows: `%USERPROFILE%\.claude\settings.json`):
+Merge into `~/.claude/settings.json` (Windows: `%USERPROFILE%\.claude\settings.json`):
+
+> **CRITICAL: You MUST read the existing `settings.json` first and MERGE — NEVER overwrite.**
+> - For `"env"`: add/update only the keys shown below. Keep all existing env vars intact.
+> - For `"hooks"`: for each event type, **append** the TMA1 hook entry to the existing array. Do NOT replace the array or remove other hooks.
+> - For all other top-level keys (`permissions`, `mcpServers`, `enabledPlugins`, etc.): do NOT touch them.
+>
+> Example merge for a hook event that already has entries:
+> ```json
+> "PreToolUse": [
+>   { "hooks": [{ "type": "command", "command": "existing-hook.sh" }] },
+>   { "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }
+> ]
+> ```
+
+The following keys need to be present (add if missing, do not remove others):
 
 ```json
 {
@@ -206,40 +224,40 @@ Add to `~/.claude/settings.json` (Windows: `%USERPROFILE%\.claude\settings.json`
     "OTEL_TRACES_EXPORTER": "otlp"
   },
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SessionEnd": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostToolUse": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostToolUseFailure": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SubagentStart": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SubagentStop": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Notification": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Stop": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PreCompact": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostCompact": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PermissionRequest": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PermissionDenied": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TaskCreated": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TaskCompleted": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "FileChanged": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "CwdChanged": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "InstructionsLoaded": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Elicitation": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "ElicitationResult": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "WorktreeCreate": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "WorktreeRemove": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "StopFailure": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Setup": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TeammateIdle": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "ConfigChange": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostCompact": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PermissionDenied": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TaskCreated": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "FileChanged": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "CwdChanged": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "InstructionsLoaded": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Elicitation": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "ElicitationResult": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "WorktreeCreate": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "WorktreeRemove": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "StopFailure": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Setup": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TeammateIdle": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "ConfigChange": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }]
   }
 }
 ```
 
 Claude Code exports metrics, logs, and traces (when enhanced telemetry enabled). `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` enables trace spans (TTFT, tool timing, permission waits) for the Traces tab and waterfall visualization.
 
-The `hooks` section uses HTTP hooks (direct POST, no shell script needed) for all 27 event types. This enables session-level conversation tracking (tool calls, subagent hierarchy, context compaction, permission flow, file changes) in the Sessions view. If existing hooks are present, merge — do not replace them.
+The `hooks` section uses command hooks (via `~/.tma1/hooks/tma1-hook.sh`, auto-installed by tma1-server on startup) for all 27 event types. On Windows, use `%USERPROFILE%\.tma1\hooks\tma1-hook.ps1` instead. This enables session-level conversation tracking (tool calls, subagent hierarchy, context compaction, permission flow, file changes) in the Sessions view.
 
 #### Codex
 
@@ -265,6 +283,12 @@ protocol = "binary"
 Codex uses separate exporters for logs, traces, and metrics. Restart Codex after config changes.
 
 Codex session logs are automatically stored at `~/.codex/sessions/` in JSONL format. TMA1 can parse these for conversation replay in the Sessions view — no additional configuration needed beyond OTel setup above.
+
+#### GitHub Copilot CLI
+
+**Zero config.** TMA1 auto-discovers Copilot CLI session logs at `~/.copilot/session-state/<sessionId>/events.jsonl` and parses them into the Sessions and Prompts views. Just run `tma1-server` and use Copilot CLI as usual. No environment variables, no config file edits, no restart needed.
+
+What gets captured: session start/end, user prompts, assistant messages (content + reasoning → thinking), tool calls with success/failure, subagent lifecycle (with model / tokens / duration metadata), and skill invocations.
 
 #### Any OTel SDK
 

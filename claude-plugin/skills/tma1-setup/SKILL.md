@@ -1,6 +1,6 @@
 ---
 name: tma1-setup
-description: "Install and configure TMA1 local observability. Use when the user says: install tma1, setup observability, monitor my agent, track token usage, set up telemetry."
+description: "Install and configure TMA1 local observability (Claude Code, Codex, GitHub Copilot CLI, OpenClaw, any OTel SDK). Use when the user says: install tma1, setup observability, monitor my agent, track token usage, set up telemetry."
 context: fork
 allowed-tools: Bash
 ---
@@ -87,7 +87,23 @@ This should return `{"status":"ok","greptimedb":"running",...}`.
 
 Tell the user to set the OTel exporter endpoint. The exact method depends on their agent:
 
-**Claude Code** — add to `~/.claude/settings.json` (Windows: `%USERPROFILE%\.claude\settings.json`):
+**Claude Code** — merge into `~/.claude/settings.json` (Windows: `%USERPROFILE%\.claude\settings.json`):
+
+> **CRITICAL: You MUST read the existing `settings.json` first and MERGE — NEVER overwrite.**
+> - For `"env"`: add/update only the keys shown below. Keep all existing env vars intact.
+> - For `"hooks"`: for each event type, **append** the TMA1 hook entry to the existing array. Do NOT replace the array or remove other hooks.
+> - For all other top-level keys (`permissions`, `mcpServers`, `enabledPlugins`, etc.): do NOT touch them.
+>
+> Example merge for a hook event that already has entries:
+> ```json
+> "PreToolUse": [
+>   { "hooks": [{ "type": "command", "command": "existing-hook.sh" }] },
+>   { "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }
+> ]
+> ```
+
+The following keys need to be present (add if missing, do not remove others):
+
 ```json
 {
   "env": {
@@ -100,38 +116,38 @@ Tell the user to set the OTel exporter endpoint. The exact method depends on the
     "OTEL_TRACES_EXPORTER": "otlp"
   },
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SessionEnd": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostToolUse": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostToolUseFailure": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SubagentStart": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "SubagentStop": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Notification": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Stop": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PreCompact": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PostCompact": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PermissionRequest": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "PermissionDenied": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TaskCreated": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TaskCompleted": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "FileChanged": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "CwdChanged": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "InstructionsLoaded": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Elicitation": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "ElicitationResult": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "WorktreeCreate": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "WorktreeRemove": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "StopFailure": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "Setup": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "TeammateIdle": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }],
-    "ConfigChange": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:14318/api/hooks", "timeout": 3 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostToolUseFailure": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PostCompact": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "PermissionDenied": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TaskCreated": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "FileChanged": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "CwdChanged": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "InstructionsLoaded": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Elicitation": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "ElicitationResult": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "WorktreeCreate": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "WorktreeRemove": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "StopFailure": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "Setup": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "TeammateIdle": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }],
+    "ConfigChange": [{ "hooks": [{ "type": "command", "command": "~/.tma1/hooks/tma1-hook.sh", "timeout": 3 }] }]
   }
 }
 ```
 
-Claude Code exports metrics, logs, and traces (enhanced telemetry). `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` enables trace spans with TTFT, tool timing, and permission waits for the Traces tab and waterfall. The `hooks` use HTTP hooks (direct POST, no shell script) for all 27 event types. If existing hooks are present, merge — do not replace them.
+Claude Code exports metrics, logs, and traces (enhanced telemetry). `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` enables trace spans with TTFT, tool timing, and permission waits for the Traces tab and waterfall. The `hooks` use command hooks (via `~/.tma1/hooks/tma1-hook.sh`, auto-installed by tma1-server on startup) for all 27 event types. On Windows, use `%USERPROFILE%\.tma1\hooks\tma1-hook.ps1` instead.
 
 **Codex** — add to `~/.codex/config.toml` (Windows: `%USERPROFILE%\.codex\config.toml`):
 ```toml
@@ -163,6 +179,10 @@ openclaw config set diagnostics.otel.metrics true
 openclaw gateway restart
 ```
 
+Session transcripts at `~/.openclaw/agents/*/sessions/*.jsonl` are auto-discovered — no extra setup needed for Sessions and Prompts views.
+
+**GitHub Copilot CLI** — zero config. TMA1 auto-discovers session logs at `~/.copilot/session-state/<sessionId>/events.jsonl`. Nothing to configure; just run `tma1-server` and use Copilot CLI normally. Sessions, tool calls (with failure detection), subagent lifecycle, and skill invocations all show up in the Copilot CLI dashboard view and the unified Sessions view.
+
 **Other OTel-compatible agents** (standard GenAI SDK) — typically export traces:
 ```bash
 # macOS / Linux
@@ -186,7 +206,7 @@ curl -s -X POST http://localhost:14318/api/query \
   -d '{"sql": "SHOW TABLES"}' 2>/dev/null | python3 -m json.tool
 ```
 
-If you see `opentelemetry_logs`, `opentelemetry_traces`, `openclaw_*`, `claude_code_*`, or `tma1_hook_events` tables, data is flowing.
+If you see `opentelemetry_logs`, `opentelemetry_traces`, `openclaw_*`, `claude_code_*`, `codex_*`, `tma1_hook_events`, or `tma1_messages` tables, data is flowing. For Copilot CLI specifically, check that `tma1_hook_events` has rows with `agent_source = 'copilot_cli'`.
 
 ## Handoff
 
